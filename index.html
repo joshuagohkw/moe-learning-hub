@@ -1055,7 +1055,7 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
       <br>
       <p><strong>AI Generated</strong> <span class="source-tag ai"><span class="dot"></span>AI</span> — Uses AI to create unique, contextual questions tailored to the student's level and weaknesses. Requires internet and an API key. Falls back to local if AI is unavailable.</p>
       <br>
-      <p><strong>Real Exam</strong> <span class="source-tag exam"><span class="dot"></span>Exam</span> — Real questions transcribed from actual 2025 Singapore school exam papers (shows the school and term it came from). Always available offline. Currently covers Primary 2, 3, 4 and 5 -- other levels/subjects use Local/AI until more papers are added.</p>
+      <p><strong>Real Exam</strong> <span class="source-tag exam"><span class="dot"></span>Exam</span> — Real questions transcribed from actual 2025 Singapore school exam papers (shows the school and term it came from). Always available offline. Currently covers Primary 2-5 for Math/English/Chinese and Primary 3-5 for Science -- other levels/subjects use Local/AI until more papers are added.</p>
     </div>
   </div>
 </div>
@@ -2031,6 +2031,10 @@ var PET_STAGES = [
    "one past the Young Dragon stage's max" (the last entry before the Mystery Pet
    stage itself), so moving that boundary automatically moves the evolution trigger. */
 var MYSTERY_EVOLUTION_LEVEL = PET_STAGES[PET_STAGES.length - 2].max + 1;
+/* Cached once, same rationale as MYSTERY_EVOLUTION_LEVEL above -- petStageIndexAndGrowth
+   is called on every pet render (including the quiz-tab pet widget), so re-deriving this
+   from PET_STAGES on every call would be wasted work in a hot path. */
+var PET_STAGE_BOUNDS = PET_STAGES.map(function(s) { return s.max; });
 function getPetStage(level) {
   for (var i = 0; i < PET_STAGES.length; i++) if (level <= PET_STAGES[i].max) return PET_STAGES[i];
   return PET_STAGES[PET_STAGES.length - 1];
@@ -2063,15 +2067,14 @@ function getPetDisplayInfo(level) {
    instance (#pet-emoji) can track the mouse cursor.
    ============================================================ */
 function petStageIndexAndGrowth(level) {
-  var bounds = PET_STAGES.map(function(s) { return s.max; });
   var prevMax = 0;
-  for (var i = 0; i < bounds.length; i++) {
-    if (level <= bounds[i]) {
-      var stageMin = prevMax + 1, stageMax = bounds[i];
+  for (var i = 0; i < PET_STAGE_BOUNDS.length; i++) {
+    if (level <= PET_STAGE_BOUNDS[i]) {
+      var stageMin = prevMax + 1, stageMax = PET_STAGE_BOUNDS[i];
       var growth = (level - stageMin) / Math.max(1, (stageMax - stageMin));
       return { stage: i, growth: Math.max(0, Math.min(1, growth)) };
     }
-    prevMax = bounds[i];
+    prevMax = PET_STAGE_BOUNDS[i];
   }
   return { stage: 4, growth: 1 };
 }
@@ -2779,6 +2782,20 @@ function escapeHtml(s) {
 /* ============================================================
    JS: NUMERIC OPTION GENERATOR
    ============================================================ */
+/* Shared by genMathTime/genMathMoney: try each candidate offset through formatFn (in
+   order) and keep the first `count` results that are distinct from the correct
+   answer's formatted string, de-duping on the FORMATTED string rather than the raw
+   offset -- two different offsets can format to the same displayed answer (e.g. a
+   "+15 min" and "-15 min" nudge both landing on the same :15 mark), which would
+   otherwise show identical-looking answer buttons. */
+function pickDistinctFormattedWrongOptions(correctStr, offsets, formatFn, count) {
+  var wrongSet = new Set();
+  for (var i = 0; i < offsets.length && wrongSet.size < count; i++) {
+    var candidate = formatFn(offsets[i]);
+    if (candidate !== correctStr) wrongSet.add(candidate);
+  }
+  return Array.from(wrongSet);
+}
 function generateNumericOptions(correctAns, spread) {
   var s = new Set();
   s.add(correctAns);
@@ -2959,18 +2976,13 @@ function genMathTime(level, diff) {
     return hh + ':' + String(m).padStart(2, '0') + ' ' + period;
   };
   var ans = fmtTime(endH, endM);
-  /* De-dupe on the FORMATTED string, not the raw h/m offset -- e.g. when endM is 0,
-     a "+15 min" and a "-15 min" nudge both land on the same :15 mark and would
-     otherwise show two identical-looking answer buttons. */
   var offsets = [[0, 15], [0, -15], [1, 0], [-1, 0], [0, 30], [0, -30], [1, 15], [-1, -15], [2, 0]];
-  var wrongSet = new Set();
-  for (var oi = 0; oi < offsets.length && wrongSet.size < 3; oi++) {
-    var h2 = (((endH + offsets[oi][0]) % 24) + 24) % 24;
-    var m2 = ((endM + offsets[oi][1]) % 60 + 60) % 60;
-    var candidate = fmtTime(h2, m2);
-    if (candidate !== ans) wrongSet.add(candidate);
-  }
-  var allOpts = shuffle([ans].concat(Array.from(wrongSet)));
+  var wrong = pickDistinctFormattedWrongOptions(ans, offsets, function(o) {
+    var h2 = (((endH + o[0]) % 24) + 24) % 24;
+    var m2 = ((endM + o[1]) % 60 + 60) % 60;
+    return fmtTime(h2, m2);
+  }, 3);
+  var allOpts = shuffle([ans].concat(wrong));
   var p = rNameG();
   return { text: p.name + ' starts reading at ' + fmtTime(startH, startM) + '. ' + p.S + ' reads for ' + addMin + ' minutes. What time does ' + p.s + ' finish?',
     options: allOpts, answer: allOpts.indexOf(ans), category: 'Math', diffLevel: diff, source: 'local',
@@ -2984,18 +2996,13 @@ function genMathMoney(level, diff) {
   var change = (paid - parseFloat(priceA) - parseFloat(priceB)).toFixed(2);
   var p = rNameG();
   var ans = '$' + change;
-  /* De-dupe on the FORMATTED "$X.XX" string, not the raw offset -- e.g. when change
-     is $0.00, both a "+$0.50" and a "-$0.50" nudge land on the same $0.50 (abs()
-     folds the negative case back onto the positive one), which would otherwise show
-     two identical-looking answer buttons. */
   var changeOffsets = [0.5, -0.5, 1, -1, 0.25, -0.25, 1.5, 0.75];
-  var wrongSet = new Set();
-  for (var ci = 0; ci < changeOffsets.length && wrongSet.size < 3; ci++) {
-    var candidateVal = Math.abs(parseFloat(change) + changeOffsets[ci]);
-    var candidate = '$' + candidateVal.toFixed(2);
-    if (candidate !== ans) wrongSet.add(candidate);
-  }
-  var allOpts = shuffle([ans].concat(Array.from(wrongSet)));
+  var wrong = pickDistinctFormattedWrongOptions(ans, changeOffsets, function(delta) {
+    /* abs() means, e.g. when change is $0.00, both a "+$0.50" and "-$0.50" nudge
+       fold onto the same $0.50 -- the shared helper's Set still keeps it to one. */
+    return '$' + Math.abs(parseFloat(change) + delta).toFixed(2);
+  }, 3);
+  var allOpts = shuffle([ans].concat(wrong));
   return { text: p.name + ' buys a drink for $' + priceA + ' and a snack for $' + priceB + '. ' + p.S + ' pays with $' + paid.toFixed(2) + '. How much change does ' + p.name + ' get?',
     options: allOpts, answer: allOpts.indexOf(ans), category: 'Math', diffLevel: diff, source: 'local',
     explanation: 'Total cost = $' + priceA + ' + $' + priceB + ' = $' + (parseFloat(priceA) + parseFloat(priceB)).toFixed(2) + '\nChange = $' + paid.toFixed(2) + ' - $' + (parseFloat(priceA) + parseFloat(priceB)).toFixed(2) + ' = ' + ans };
@@ -3169,14 +3176,22 @@ function genMathConstantTotal(level, diff) {
 
 /* Math: Constant Difference (P5+) — classic age/ratio problem */
 function genMathConstantDifference(level, diff) {
-  var r1 = rInt(3, 7), r2 = rInt(2, r1 - 1);
-  var diffParts = r1 - r2;
-  var unit = rInt(2, 6);
-  var d = diffParts * unit;
-  var n = rInt(2, 6);
-  var futureB = r2 * unit;
-  var currentB = futureB - n;
-  if (currentB < 3) return genMathConstantDifference(level, diff);
+  var r1, r2, diffParts, unit, d, n, futureB, currentB;
+  var attempts = 0;
+  do {
+    r1 = rInt(3, 7); r2 = rInt(2, r1 - 1);
+    diffParts = r1 - r2;
+    unit = rInt(2, 6);
+    d = diffParts * unit;
+    n = rInt(2, 6);
+    futureB = r2 * unit;
+    currentB = futureB - n;
+    attempts++;
+  } while (currentB < 3 && attempts < 30);
+  /* Bounded retry, not recursion -- an unlucky draw here shouldn't be able to
+     recurse indefinitely. In the near-impossible case all 30 draws land invalid,
+     shrink n so the scenario is still valid rather than serving a negative age. */
+  if (currentB < 3) { n = Math.max(1, futureB - 3); currentB = futureB - n; }
   var currentA = currentB + d;
   var p1 = rNameG(), p2 = rNameG();
   var ans = currentB;
@@ -4145,7 +4160,7 @@ var SCI_ENERGY = [
   ['chemical','a battery','chemical','electrical'],
   ['chemical','petrol/gasoline','chemical','kinetic and heat'],
   ['chemical','firewood','chemical','heat and light'],
-  ['chemical','a coal-fired power station','chemical','electrical'],
+  ['chemical','coal','chemical','electrical'],
   ['electrical','lightning','electrical','light and heat and sound'],
   ['light','the Sun','nuclear','light and heat'],
   ['light','a light bulb','electrical','light and heat'],
@@ -6296,7 +6311,8 @@ function genBTOddOneOut(level, diff) {
 /* ============================================================
    JS: EXAM QUESTION BANK (real past papers)
    Real questions transcribed from actual 2025 Singapore Primary school
-   exam papers (currently Primary 2, 3, 4 and 5; most source PDFs had no
+   exam papers (currently Primary 2-5 for Math/English/Chinese, Primary 3-5
+   for Science; most source PDFs had no
    answer key, so answers were derived/verified independently during
    extraction, cross-checked against an official key where the paper
    included one).
@@ -6339,6 +6355,12 @@ function generateQuestionExam(level, category) {
    ============================================================ */
 function generateQuestionLocal(level, category) {
   var diff = getBoostedDifficulty(category);
+  /* Rounded once here so the "does this count as high difficulty" gates below agree
+     with generateQuestionAI's identically-rounded diffTier -- otherwise the same
+     underlying diff (e.g. 3.85) could clear the AI prompt's threshold while never
+     unlocking the equivalent local generators, an inconsistency between the two
+     question sources at the exact same measured difficulty. */
+  var diffTier = Math.max(1, Math.min(5, Math.round(diff)));
   var generators = {
     'Math': function() {
       var pool = [genMathAddSub, genMathAddSubInput];
@@ -6352,8 +6374,8 @@ function generateQuestionLocal(level, category) {
       /* Named PSLE heuristics -- only enter the pool at high difficulty, so raising
          difficulty changes problem STRUCTURE (bar-model heuristics), not just the
          size of the numbers inside the same simple template. */
-      if (level >= 4 && diff >= 4) pool.push(genMathWorkingBackwards, genMathConstantTotal);
-      if (level >= 5 && diff >= 4) pool.push(genMathConstantDifference, genMathUnitsModel);
+      if (level >= 4 && diffTier >= 4) pool.push(genMathWorkingBackwards, genMathConstantTotal);
+      if (level >= 5 && diffTier >= 4) pool.push(genMathConstantDifference, genMathUnitsModel);
       var fn = pickAdaptive(pool, category);
       var q = fn(level, diff);
       q.skill = SKILL_LABELS[fn.name] || fn.name;
@@ -6365,7 +6387,7 @@ function generateQuestionLocal(level, category) {
       if (level >= 3) pool.push(genSciMagnet);
       if (level >= 4) pool.push(genSciBody, genSciEnergy, genSciForces, genSciReasoning, genSciElectromagnet);
       /* Fair Testing / CER: application & experimental-design skills, not recall. */
-      if (level >= 4 && diff >= 4) pool.push(genSciFairTesting, genSciCER);
+      if (level >= 4 && diffTier >= 4) pool.push(genSciFairTesting, genSciCER);
       var fn = pickAdaptive(pool, category);
       var q = fn(level, diff);
       q.skill = SKILL_LABELS[fn.name] || fn.name;
@@ -6377,7 +6399,7 @@ function generateQuestionLocal(level, category) {
       if (level >= 3) pool.push(genEngComprehension, genEngSynthesis, genEngNotice);
       if (level >= 4) pool.push(genEngPhrasal, genEngGrammarChoice, genEngInference);
       /* PSLE-level Synthesis & Transformation, subtle vocabulary-in-context. */
-      if (level >= 5 && diff >= 4) pool.push(genEngSynthesisAdvanced, genEngVocabContext);
+      if (level >= 5 && diffTier >= 4) pool.push(genEngSynthesisAdvanced, genEngVocabContext);
       var fn = pickAdaptive(pool, category);
       var q = fn(level, diff);
       q.skill = SKILL_LABELS[fn.name] || fn.name;
@@ -6389,7 +6411,7 @@ function generateQuestionLocal(level, category) {
       if (level >= 3) pool.push(genChnComprehension, genChnSentenceOrder, genChnCloze, genChnCollocation);
       if (level >= 4) pool.push(genChnIdiom);
       /* 词语替换 (vocabulary substitution), 句型转换 (sentence-structure transform). */
-      if (level >= 5 && diff >= 4) pool.push(genChnVocabSubstitution, genChnSentenceStructure);
+      if (level >= 5 && diffTier >= 4) pool.push(genChnVocabSubstitution, genChnSentenceStructure);
       var fn = pickAdaptive(pool, category);
       var q = fn(level, diff);
       q.skill = SKILL_LABELS[fn.name] || fn.name;
@@ -7388,10 +7410,10 @@ var BADGE_DEFS = [
   { id: 'streak_30days', icon: '🔥', name: 'Monthly Marvel', desc: 'Play on 30 different days', check: function() { return new Set(store.sessions.map(function(s) { return s.date; })).size >= 30; } },
 
   /* --- Pet milestones (ties into the 5-stage pet system) --- */
-  { id: 'hatchling_hero', icon: '🥚', name: 'Hatchling Hero', desc: 'Your pet reaches Level 21', check: function() { return getPetLevel() >= PET_STAGES[0].max + 1; } },
-  { id: 'fledgling_friend', icon: '🐣', name: 'Fledgling Friend', desc: 'Your pet reaches Level 41', check: function() { return getPetLevel() >= PET_STAGES[1].max + 1; } },
-  { id: 'young_dragon_tamer', icon: '🐲', name: 'Young Dragon Tamer', desc: 'Your pet reaches Level 61', check: function() { return getPetLevel() >= PET_STAGES[2].max + 1; } },
-  { id: 'mystery_unlocked', icon: '✨', name: 'Mystery Unlocked', desc: 'Your pet evolves at Level 81', check: function() { return petIsEvolved(); } },
+  { id: 'hatchling_hero', icon: '🥚', name: 'Hatchling Hero', desc: 'Your pet reaches Level ' + (PET_STAGES[0].max + 1), check: function() { return getPetLevel() >= PET_STAGES[0].max + 1; } },
+  { id: 'fledgling_friend', icon: '🐣', name: 'Fledgling Friend', desc: 'Your pet reaches Level ' + (PET_STAGES[1].max + 1), check: function() { return getPetLevel() >= PET_STAGES[1].max + 1; } },
+  { id: 'young_dragon_tamer', icon: '🐲', name: 'Young Dragon Tamer', desc: 'Your pet reaches Level ' + (PET_STAGES[2].max + 1), check: function() { return getPetLevel() >= PET_STAGES[2].max + 1; } },
+  { id: 'mystery_unlocked', icon: '✨', name: 'Mystery Unlocked', desc: 'Your pet evolves at Level ' + MYSTERY_EVOLUTION_LEVEL, check: function() { return petIsEvolved(); } },
   { id: 'max_level_legend', icon: '🏆', name: 'Max Level Legend', desc: 'Your pet reaches Level 100', check: function() { return getPetLevel() >= PET_MAX_LEVEL; } },
   { id: 'generous_owner', icon: '🛍️', name: 'Generous Owner', desc: 'Buy 10 items from the Pet Shop', check: function() { return (store.totalShopPurchases || 0) >= 10; } },
   { id: 'pet_collector', icon: '🎴', name: 'Pet Collector', desc: 'Discover 3 different Mystery Pets', check: function() { return Object.keys(store.petCollection || {}).length >= 3; } }
