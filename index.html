@@ -1789,6 +1789,10 @@ var SKILL_LABELS = {
   genMathBarGraph: 'Bar Graphs',
   genMathClockRead: 'Time',
   genMathAreaPerimDiagram: 'Area & Perimeter',
+  genMathWorkingBackwards: 'Working Backwards',
+  genMathConstantTotal: 'Constant Total (Model Method)',
+  genMathConstantDifference: 'Constant Difference',
+  genMathUnitsModel: 'Units & Parts (Model Method)',
 
   genSciAnimal: 'Animals',
   genSciPlant: 'Plants',
@@ -1804,6 +1808,8 @@ var SKILL_LABELS = {
   genSciMicroorganisms: 'Fungi, Bacteria & Decomposers',
   genSciElectromagnet: 'Electromagnets',
   genSciLifeCycleDiagram: 'Life Cycles',
+  genSciFairTesting: 'Fair Testing (Variables)',
+  genSciCER: 'CER (Claim-Evidence-Reasoning)',
 
   genEngTense: 'Verb Tenses', genEngTenseInput: 'Verb Tenses',
   genEngVocab: 'Vocabulary',
@@ -1818,6 +1824,8 @@ var SKILL_LABELS = {
   genEngPictureComposition: 'Picture Composition',
   genEngNotice: 'Notices & Visual Texts',
   genEngEditing: 'Editing (Spelling & Grammar)', genEngEditingInput: 'Editing (Spelling & Grammar)',
+  genEngSynthesisAdvanced: 'Synthesis & Transformation',
+  genEngVocabContext: 'Vocabulary in Context',
 
   genChnPinyin: 'Pinyin', genChnPinyinInput: 'Pinyin',
   genChnVocab: 'Vocabulary (词语)',
@@ -1828,7 +1836,9 @@ var SKILL_LABELS = {
   genChnComprehension: 'Reading Comprehension',
   genChnCloze: 'Cloze Passage (填空)',
   genChnCollocation: 'Word Collocation (词语搭配)',
-  genChnPictureVocab: 'Picture Vocabulary (看图学词)'
+  genChnPictureVocab: 'Picture Vocabulary (看图学词)',
+  genChnVocabSubstitution: 'Vocabulary Substitution (词语替换)',
+  genChnSentenceStructure: 'Sentence Structure (句型转换)'
 };
 
 /* One short, generic, ANSWER-SAFE strategy hint per skill label -- shown when a student
@@ -1861,6 +1871,10 @@ var SKILL_HINTS = {
   'Perpendicular & Parallel Lines': 'Perpendicular lines meet at a right angle (90°); parallel lines never meet at all.',
   'Length, Mass & Volume': 'Check the units given and think about whether you need to convert before comparing or calculating.',
   'Bar Graphs': 'Read the scale on the axis carefully before comparing the height of the bars.',
+  'Working Backwards': 'Start from the final result and undo each step in reverse order, using the opposite operation each time.',
+  'Constant Total (Model Method)': 'The total stays the same throughout -- draw it as a fixed number of units, then work out what changes is only how the units are split.',
+  'Constant Difference': 'The difference between the two quantities never changes over time -- use it to work out how many units that difference is worth.',
+  'Units & Parts (Model Method)': 'Draw the whole amount as equal units matching the ratio, then find what one unit is worth before answering the question.',
 
   'Animals': "Think about the animal's habitat and how its body helps it survive there.",
   'Plants': 'Think about what each part of the plant does to help it grow, make food, or reproduce.',
@@ -1875,6 +1889,8 @@ var SKILL_HINTS = {
   'Science Reasoning': 'Think about what would happen if you changed just ONE thing in the experiment.',
   'Fungi, Bacteria & Decomposers': 'Remember fungi and bacteria cannot make their own food like plants do — think about what they feed on instead.',
   'Electromagnets': "Think about what's changing — the current, the number of coils, or the core material — and how that affects the magnet's strength.",
+  'Fair Testing (Variables)': 'The INDEPENDENT variable is what you change on purpose; the DEPENDENT variable is what you measure; everything else must stay the SAME for the test to be fair.',
+  'CER (Claim-Evidence-Reasoning)': 'Evidence is the observed FACT that supports the claim; reasoning is the science CONCEPT that explains why that fact supports it.',
 
   'Verb Tenses': "Look for time clues in the sentence (like 'yesterday' or 'now') to figure out which tense fits.",
   'Vocabulary': 'Think about the context of the sentence -- which word fits the meaning best?',
@@ -1889,6 +1905,7 @@ var SKILL_HINTS = {
   'Picture Composition': 'Look closely at every detail in the picture — the people, their actions, and the setting — before choosing or ordering the sentences.',
   'Notices & Visual Texts': 'Scan the notice for the specific detail the question asks about — dates, times, venues, and prices are usually easy to spot if you look carefully.',
   'Editing (Spelling & Grammar)': "Read the sentence slowly and look for a word that's spelled wrong or doesn't fit grammatically.",
+  'Vocabulary in Context': 'Several words might seem close in meaning -- read the whole sentence for tone and feeling to find which ONE truly fits.',
 
   'Pinyin': 'Think about how the word actually sounds when spoken aloud.',
   'Vocabulary (词语)': 'Think about the meaning of each character and how they combine.',
@@ -1899,7 +1916,9 @@ var SKILL_HINTS = {
   'Reading Comprehension': 'Go back to the passage and find the part that answers this question.',
   'Cloze Passage (填空)': 'Read the whole passage first so you understand the story, then check which word fits both the meaning and the grammar of that sentence.',
   'Word Collocation (词语搭配)': 'Try saying each option together with the fixed word out loud — real Chinese words/phrases will sound natural, made-up combinations will sound odd.',
-  'Picture Vocabulary (看图学词)': 'Look carefully at the shape, colour, and details in the picture, then think of the Chinese word for that everyday object.'
+  'Picture Vocabulary (看图学词)': 'Look carefully at the shape, colour, and details in the picture, then think of the Chinese word for that everyday object.',
+  'Vocabulary Substitution (词语替换)': 'Try mentally swapping each option into the sentence in place of the bracketed word -- the right one should keep the exact same meaning.',
+  'Sentence Structure (句型转换)': 'In 把字句 the doer comes first; in 被字句 the receiver of the action comes first -- work out who is doing what to whom before rearranging.'
 };
 var SKILL_HINTS_FALLBACK = "Re-read the question carefully, think about what it's really asking, and try to eliminate anything that clearly doesn't fit.";
 function getHintForQuestion(q) {
@@ -3099,6 +3118,90 @@ function genMathFractionRemainder(level, diff) {
   return { text: p.name + ' had $' + total + '. ' + p.S + ' spent 1/' + a + ' of it on food, then 1/' + b + ' of the remaining money on a toy. How much money does ' + p.s + ' have left?',
     options: opts.map(function(o){ return '$' + o; }), answer: opts.indexOf(left), category: 'Math', diffLevel: diff, source: 'local',
     explanation: 'Step 1: Food = 1/' + a + ' of $' + total + ' = $' + spent1 + '\nStep 2: Remainder = $' + total + ' − $' + spent1 + ' = $' + remainder1 + '\nStep 3: Toy = 1/' + b + ' of $' + remainder1 + ' = $' + spent2 + '\nStep 4: Left = $' + remainder1 + ' − $' + spent2 + ' = $' + left };
+}
+
+/* ============================================================
+   MOE HEURISTIC GENERATORS (P4-P6, high difficulty only)
+   These use the named PSLE problem-solving heuristics explicitly, with
+   explanations written in bar-model/units language rather than plain
+   arithmetic steps. Only added to the pool at diff >= 4 (see
+   generateQuestionLocal) so raising difficulty changes problem STRUCTURE,
+   not just the size of the numbers inside the same simple template.
+   ============================================================ */
+/* Math: Working Backwards (P4+) */
+function genMathWorkingBackwards(level, diff) {
+  var original = rInt(4, 20);
+  var a = rInt(2, 5);
+  var b = rInt(5, 30);
+  var c = rInt(2, Math.min(20, a * original + b - 1));
+  var step1 = original * a;
+  var step2 = step1 + b;
+  var result = step2 - c;
+  if (result < 1) return genMathWorkingBackwards(level, diff);
+  var p = rNameG();
+  var ans = original;
+  var opts = generateNumericOptions(ans, Math.max(2, Math.floor(ans * 0.3) + 1));
+  return { text: p.name + ' thought of a number. ' + p.S + ' multiplied it by ' + a + ', added ' + b + ', then subtracted ' + c + '. The final answer was ' + result + '. What was the number ' + p.s + ' thought of?',
+    options: opts.map(String), answer: opts.indexOf(ans), category: 'Math', diffLevel: diff, source: 'local',
+    heuristic: 'Working Backwards',
+    explanation: 'To work backwards, UNDO each step in REVERSE order, using the opposite operation each time.\n\nStep 1: Undo "− ' + c + '" (the last step) by adding: ' + result + ' + ' + c + ' = ' + step2 + '.\nStep 2: Undo "+ ' + b + '" by subtracting: ' + step2 + ' − ' + b + ' = ' + step1 + '.\nStep 3: Undo "× ' + a + '" (the first step) by dividing: ' + step1 + ' ÷ ' + a + ' = ' + ans + '.' };
+}
+
+/* Math: Constant Total (P4+) — classic "transfer" problem */
+function genMathConstantTotal(level, diff) {
+  var r1 = rInt(2, 5), r2 = rInt(2, 5);
+  while (r2 === r1) r2 = rInt(2, 5);
+  var totalParts = r1 + r2;
+  var unit = rInt(3, 9);
+  var total = totalParts * unit;
+  var afterA = r1 * unit, afterB = r2 * unit;
+  var x = rInt(2, Math.max(2, Math.floor(unit * Math.min(r1, r2) * 0.6)));
+  var originalA = afterA + x, originalB = afterB - x;
+  if (originalB < 1) return genMathConstantTotal(level, diff);
+  var p1 = rNameG(), p2 = rNameG();
+  var ans = originalA;
+  var opts = generateNumericOptions(ans, Math.max(3, Math.floor(ans * 0.15) + 1));
+  return { text: p1.name + ' and ' + p2.name + ' have $' + total + ' altogether. After ' + p1.name + ' gives $' + x + ' to ' + p2.name + ', the ratio of ' + p1.name + '\'s money to ' + p2.name + '\'s money becomes ' + r1 + ':' + r2 + '. How much money did ' + p1.name + ' have at first?',
+    options: opts.map(function(o){ return '$' + o; }), answer: opts.indexOf(ans), category: 'Math', diffLevel: diff, source: 'local',
+    heuristic: 'Constant Total (Model Method)',
+    explanation: 'The TOTAL amount of money stays the same before and after the transfer — only how it is split between them changes.\n\nStep 1: Total units after the transfer = ' + r1 + ' + ' + r2 + ' = ' + totalParts + ' units = $' + total + ', so 1 unit = $' + total + ' ÷ ' + totalParts + ' = $' + unit + '.\nStep 2: After giving money away, ' + p1.name + ' has ' + r1 + ' units = $' + afterA + '.\nStep 3: Since ' + p1.name + ' gave away $' + x + ', ' + p1.name + ' had $' + afterA + ' + $' + x + ' = $' + originalA + ' at first.' };
+}
+
+/* Math: Constant Difference (P5+) — classic age/ratio problem */
+function genMathConstantDifference(level, diff) {
+  var r1 = rInt(3, 7), r2 = rInt(2, r1 - 1);
+  var diffParts = r1 - r2;
+  var unit = rInt(2, 6);
+  var d = diffParts * unit;
+  var n = rInt(2, 6);
+  var futureB = r2 * unit;
+  var currentB = futureB - n;
+  if (currentB < 3) return genMathConstantDifference(level, diff);
+  var currentA = currentB + d;
+  var p1 = rNameG(), p2 = rNameG();
+  var ans = currentB;
+  var opts = generateNumericOptions(ans, Math.max(2, Math.floor(ans * 0.2) + 1));
+  return { text: 'This year, ' + p1.name + ' is ' + d + ' years older than ' + p2.name + '. In ' + n + ' years\' time, the ratio of ' + p1.name + '\'s age to ' + p2.name + '\'s age will be ' + r1 + ':' + r2 + '. How old is ' + p2.name + ' now?',
+    options: opts.map(String), answer: opts.indexOf(ans), category: 'Math', diffLevel: diff, source: 'local',
+    heuristic: 'Constant Difference',
+    explanation: 'The age DIFFERENCE between ' + p1.name + ' and ' + p2.name + ' never changes — only their ages increase together, year after year.\n\nStep 1: In the future ratio ' + r1 + ':' + r2 + ', the difference is ' + r1 + ' − ' + r2 + ' = ' + diffParts + ' units.\nStep 2: This ' + diffParts + ' units equals the age difference of ' + d + ' years, so 1 unit = ' + d + ' ÷ ' + diffParts + ' = ' + unit + ' years.\nStep 3: In ' + n + ' years, ' + p2.name + ' will be ' + r2 + ' units = ' + r2 + ' × ' + unit + ' = ' + futureB + ' years old.\nStep 4: ' + p2.name + '\'s age now = ' + futureB + ' − ' + n + ' = ' + currentB + ' years.' };
+}
+
+/* Math: Units & Parts / Model Method (P5+) — three-part ratio */
+function genMathUnitsModel(level, diff) {
+  var r1 = rInt(2, 5), r2 = rInt(2, 5), r3 = rInt(2, 5);
+  var totalParts = r1 + r2 + r3;
+  var unit = rInt(4, 12);
+  var total = totalParts * unit;
+  var itemA = pick(['oranges', 'red beads', 'stamps']);
+  var itemB = pick(['apples', 'blue beads', 'postcards']);
+  var itemC = pick(['pears', 'green beads', 'badges']);
+  var ans = r3 * unit;
+  var opts = generateNumericOptions(ans, Math.max(3, Math.floor(ans * 0.15) + 1));
+  return { text: 'The number of ' + itemA + ', ' + itemB + ' and ' + itemC + ' in a box is in the ratio ' + r1 + ':' + r2 + ':' + r3 + '. There are ' + total + ' items in the box altogether. How many ' + itemC + ' are there?',
+    options: opts.map(String), answer: opts.indexOf(ans), category: 'Math', diffLevel: diff, source: 'local',
+    heuristic: 'Units & Parts (Model Method)',
+    explanation: 'Draw the total as ' + totalParts + ' equal UNITS, split ' + r1 + ' : ' + r2 + ' : ' + r3 + ' among the three items.\n\nStep 1: Total units = ' + r1 + ' + ' + r2 + ' + ' + r3 + ' = ' + totalParts + ' units.\nStep 2: 1 unit = ' + total + ' ÷ ' + totalParts + ' = ' + unit + '.\nStep 3: ' + itemC + ' = ' + r3 + ' units = ' + r3 + ' × ' + unit + ' = ' + ans + '.' };
 }
 
 /* Math: Average / missing number (P4+) */
@@ -5005,6 +5108,65 @@ function genSciElectromagnet(level, diff) {
     category: 'Science', diffLevel: diff, source: 'local', explanation: s.e };
 }
 
+/* Science: Fair Testing / Identifying Variables (P4+, high difficulty only) --
+   tests experimental-design process skills instead of recall: independent,
+   dependent, and controlled variables, and what makes a test fair. */
+function genSciFairTesting(level, diff) {
+  var sets = [
+    { setup: 'A student wants to find out if the AMOUNT OF SUNLIGHT affects how tall a plant grows. She places Plant A in a sunny spot and Plant B in a shady spot. Both plants are given the same amount of water, the same type of soil, and the same size of pot.',
+      q: 'What is the INDEPENDENT variable (the one thing being deliberately changed) in this experiment?',
+      a: 'The amount of sunlight each plant receives',
+      w: ['The amount of water given to each plant', 'The type of soil used', 'The size of the pot'],
+      e: 'The independent variable is the ONE factor the student deliberately changes between the two groups — here, that is the amount of sunlight. Water, soil, and pot size are kept the SAME (controlled variables) so that sunlight is the only fair explanation for any difference in height.' },
+    { setup: 'A student wants to find out if the TYPE OF MATERIAL affects how much heat passes through it. She wraps one ice cube in metal foil and another identical ice cube in a woollen cloth, then leaves both in the same room for 30 minutes.',
+      q: 'What is the DEPENDENT variable (the one being measured/observed as the result) in this experiment?',
+      a: 'How much of each ice cube has melted',
+      w: ['The type of material used to wrap the ice', 'The room the ice cubes are placed in', 'The starting size of each ice cube'],
+      e: 'The dependent variable is what the student MEASURES to see the effect of the change — here, the amount of melting shows how much heat passed through each material. The material type is the independent variable (what is changed), not the dependent one.' },
+    { setup: 'A student wants to find out if the LENGTH OF A PENDULUM STRING affects how many swings it makes in one minute. She uses a short string and a long string, but accidentally starts one pendulum with a bigger push than the other.',
+      q: 'Why is this NOT a fair test?',
+      a: 'More than one factor (both the string length AND the size of the push) is being changed at the same time',
+      w: ['Because a pendulum cannot be tested with string', 'Because one minute is too short a time to measure', 'Because the results were not written down'],
+      e: 'For a test to be FAIR, only ONE variable should be changed at a time, with everything else kept the same. Here, both the string length and the push size changed, so it is impossible to know which one caused any difference in swings — the test is not fair.' },
+    { setup: 'A student wants to find out if SALT WATER or FRESH WATER makes an egg float higher. She places one egg in a cup of salt water and an identical egg in a cup of fresh water, using cups of the same size and the same amount of liquid.',
+      q: 'Which of these should be kept the SAME (a controlled variable) for this to be a fair test?',
+      a: 'The size of the egg used in each cup',
+      w: ['The type of liquid in each cup', 'How high each egg floats', 'The result written in the report'],
+      e: 'Controlled variables are everything that must stay the SAME so only the one factor being tested (type of liquid) explains the result. The egg size must be identical in both cups, or a difference in floating could be caused by the egg, not the water type.' }
+  ];
+  var s = pickNoRepeat('sciFairTesting', sets);
+  var allOpts = shuffle([s.a].concat(s.w));
+  return { text: s.setup + '\n\n' + s.q, options: allOpts, answer: allOpts.indexOf(s.a),
+    category: 'Science', diffLevel: diff, source: 'local', heuristic: 'Fair Testing (Variables)', explanation: s.e };
+}
+
+/* Science: CER — Claim, Evidence, Reasoning (P4+, high difficulty only) --
+   shifts from direct recall to structured scientific argumentation. */
+function genSciCER(level, diff) {
+  var sets = [
+    { text: 'A student notices that a metal spoon left in a cup of hot tea becomes hot at the handle, but a plastic spoon in the same cup stays cool at the handle.\n\nCLAIM: "Metal is a better conductor of heat than plastic."\n\nWhich EVIDENCE from the observation best supports this claim?',
+      a: 'The metal spoon\'s handle became hot, but the plastic spoon\'s handle did not',
+      w: ['The tea was hot enough to make both spoons hot', 'The cup was made of ceramic, not metal or plastic', 'Both spoons were placed in the same cup'],
+      e: 'Good evidence directly supports the claim being tested. The claim is about metal vs plastic conducting heat — the fact that heat travelled along the metal spoon (making its handle hot) but did NOT travel along the plastic spoon is the exact evidence that supports metal being the better conductor.' },
+    { text: 'A student places two identical plants in sealed containers. Container X has normal air. Container Y has air with no carbon dioxide. After a week in sunlight, the plant in X has grown new leaves, but the plant in Y has not.\n\nCLAIM: "Plants need carbon dioxide to grow."\n\nWhich REASONING correctly links the evidence to the claim?',
+      a: 'Plants make food through photosynthesis, which requires carbon dioxide — without it, the plant in Y could not make enough food to grow new leaves',
+      w: ['Plants in sealed containers always die regardless of the air inside', 'Carbon dioxide makes the air heavier, which stops leaves from growing', 'The container material caused the plant in Y to stop growing'],
+      e: 'Reasoning explains WHY the evidence supports the claim, using a science concept. Here, the correct reasoning connects the missing growth to photosynthesis needing carbon dioxide to make food — that is the scientific principle linking the observation to the claim.' },
+    { text: 'A student rubs a balloon on her hair and holds it near small pieces of paper. The paper pieces jump up and stick to the balloon.\n\nCLAIM: "Rubbing the balloon gave it an electric charge."\n\nWhich EVIDENCE from the observation best supports this claim?',
+      a: 'The paper pieces were attracted to and stuck onto the balloon after rubbing',
+      w: ['The balloon was round and made of rubber', 'The student used her hair to rub the balloon', 'The paper pieces were small and light'],
+      e: 'The claim is that rubbing charged the balloon. The direct evidence for an electric charge is that the balloon then attracted small bits of paper — this attraction is the observable effect of static electricity, which supports the claim.' },
+    { text: 'A student leaves a wet cloth on a sunny windowsill and an identical wet cloth in a shaded drawer. After two hours, the cloth on the windowsill is completely dry, but the one in the drawer is still damp.\n\nCLAIM: "A higher temperature increases the rate of evaporation."\n\nWhich EVIDENCE from the observation best supports this claim?',
+      a: 'The cloth in the warmer, sunny spot dried faster than the cloth in the cooler, shaded spot',
+      w: ['Both cloths were the same size and made wet with the same amount of water', 'The drawer was darker than the windowsill', 'The experiment lasted exactly two hours'],
+      e: 'The claim links temperature to evaporation rate. The direct evidence is the comparison of drying speed: the warmer cloth (in sunlight) evaporated its water faster than the cooler one (in the shaded drawer), directly supporting that higher temperature speeds up the rate of evaporation.' }
+  ];
+  var s = pickNoRepeat('sciCER', sets);
+  var allOpts = shuffle([s.a].concat(s.w));
+  return { text: s.text, options: allOpts, answer: allOpts.indexOf(s.a),
+    category: 'Science', diffLevel: diff, source: 'local', heuristic: 'CER (Claim-Evidence-Reasoning)', explanation: s.e };
+}
+
 /* Science: Life Cycle Diagram (P2+) -- a genuine picture question: the 4 life-cycle
    stages are drawn in order but only labelled A-D, so the student must recognise
    which icon matches which real stage from the picture itself, not from re-reading
@@ -5281,6 +5443,61 @@ function genEngSynthesis(level, diff) {
   var allOpts = shuffle([s.a].concat(wrongs));
   return { text: 'Combine these two sentences using "' + s.joiner + '":\n\n"' + s.parts[0] + '" "' + s.parts[1] + '"',
     options: allOpts, answer: allOpts.indexOf(s.a), category: 'English', diffLevel: diff, source: 'local', explanation: s.e };
+}
+
+/* English: Advanced Synthesis & Transformation (P5+, high difficulty only) --
+   genuine PSLE-level structures (Despite/Unless/Having been/relative clauses),
+   not just simple two-clause conjunctions. */
+function genEngSynthesisAdvanced(level, diff) {
+  var sets = [
+    { parts: ['It was raining heavily.', 'The football match continued.'], instruction: 'Begin with "Despite"',
+      a: 'Despite the heavy rain, the football match continued.',
+      w: ['Despite it was raining heavily, the football match continued.', 'Despite raining heavily, the football match continued.', 'Despite the football match continued, it was raining heavily.'],
+      e: '"Despite" must be followed by a NOUN PHRASE, not a full clause — so "it was raining heavily" becomes "the heavy rain", not left as a clause or a bare verb.' },
+    { parts: ['You practise every day.', 'You will not improve your swimming.'], instruction: 'Begin with "Unless"',
+      a: 'Unless you practise every day, you will not improve your swimming.',
+      w: ['Unless you will not practise every day, you improve your swimming.', 'Unless you do not practise every day, you will improve your swimming.', 'You will improve your swimming unless you will practise every day.'],
+      e: '"Unless" already means "if...not", so the clause after it stays in the ordinary present tense, affirmative form ("you practise") — it should not be doubled up with another negative or left in future tense.' },
+    { parts: ['The boy was praised by his teacher.', 'He felt very motivated.'], instruction: 'Begin with "Having been"',
+      a: 'Having been praised by his teacher, the boy felt very motivated.',
+      w: ['Having praised by his teacher, the boy felt very motivated.', 'Having been praised his teacher, the boy felt very motivated.', 'The boy having been praised, felt very motivated by his teacher.'],
+      e: 'The passive perfect participle form is "Having been + past participle" (having been praised) — "Having praised" (active) or dropping "been" changes or breaks the passive meaning.' },
+    { parts: ['The librarian helped the student.', 'The student could not find the book.'], instruction: 'Join using "who" to describe the student',
+      a: 'The librarian helped the student who could not find the book.',
+      w: ['The librarian who helped the student could not find the book.', 'The librarian helped the student which could not find the book.', 'The librarian helped who the student could not find the book.'],
+      e: '"Who" refers to a PERSON (the student) and must sit directly after the noun it describes; "which" is used for things, not people, and the word order in the third option is not a valid relative clause.' },
+    { parts: ['We arrived at the station late.', 'We missed the last train.'], instruction: 'Begin with "Having"',
+      a: 'Having arrived at the station late, we missed the last train.',
+      w: ['Having arrive at the station late, we missed the last train.', 'Having arrived at the station late, we miss the last train.', 'We having arrived at the station late, missed the last train.'],
+      e: '"Having + past participle" (having arrived) shows a completed action before the main clause — the participle must be in past participle form, and the main clause keeps its own correct past tense ("missed").' }
+  ];
+  var s = pickNoRepeat('engSynthesisAdvanced', sets);
+  var allOpts = shuffle([s.a].concat(s.w));
+  return { text: 'Combine these sentences. ' + s.instruction + ':\n\n"' + s.parts[0] + '" "' + s.parts[1] + '"',
+    options: allOpts, answer: allOpts.indexOf(s.a), category: 'English', diffLevel: diff, source: 'local',
+    heuristic: 'Synthesis & Transformation', explanation: s.e };
+}
+
+/* English: Vocabulary in Context (P5+, high difficulty only) -- subtle
+   near-synonym discrimination in a full sentence, not an isolated word. */
+function genEngVocabContext(level, diff) {
+  var sets = [
+    { text: 'The detective carefully ___ the crime scene before drawing any conclusions.', a: 'examined', w: ['glanced', 'noticed', 'saw'],
+      e: '"Examined" means to look at something thoroughly and carefully, matching "carefully...before drawing any conclusions". "Glanced" means a quick look, and "noticed"/"saw" both suggest a passive, momentary awareness — none show the careful, deliberate inspection the sentence describes.' },
+    { text: 'Even though he had lost the competition, Ravi remained ___ and congratulated the winner warmly.', a: 'gracious', w: ['furious', 'indifferent', 'anxious'],
+      e: '"Gracious" means courteous and warm-hearted even in a difficult situation, matching "congratulated the winner warmly". "Furious" (angry) and "anxious" (worried) contradict the warm reaction described, and "indifferent" (not caring) contradicts the effort to congratulate warmly.' },
+    { text: 'The old bridge looked ___, swaying dangerously whenever a heavy vehicle crossed it.', a: 'precarious', w: ['sturdy', 'ancient', 'ornate'],
+      e: '"Precarious" means unstable and likely to collapse, matching "swaying dangerously". "Sturdy" means the opposite (strong and stable); "ancient" (very old) and "ornate" (decorated) describe appearance, not instability.' },
+    { text: 'Despite the manager\'s ___ explanation, none of the new staff understood how to use the machine.', a: 'convoluted', w: ['brief', 'simple', 'clear'],
+      e: '"Convoluted" means overly complicated and hard to follow, which explains why "none of the new staff understood". "Simple", "clear", and "brief" would all logically make the explanation easy to understand, contradicting the outcome described.' },
+    { text: 'The little girl ___ her toys across the room in frustration when she could not solve the puzzle.', a: 'flung', w: ['placed', 'arranged', 'offered'],
+      e: '"Flung" means to throw forcefully, matching the emotion "in frustration". "Placed", "arranged", and "offered" all describe calm, deliberate actions that contradict a frustrated reaction.' }
+  ];
+  var s = pickNoRepeat('engVocabContext', sets);
+  var allOpts = shuffle([s.a].concat(s.w));
+  return { text: 'Choose the word that best fits the sentence:\n\n' + s.text,
+    options: allOpts, answer: allOpts.indexOf(s.a), category: 'English', diffLevel: diff, source: 'local',
+    heuristic: 'Vocabulary in Context', explanation: s.e };
 }
 
 /* English: Comprehension (P3+) — short passage + literal question */
@@ -5808,6 +6025,53 @@ function genChnIdiom(level, diff) {
   return q;
 }
 
+/* Chinese: Vocabulary Substitution / 词语替换 (P5+, high difficulty only) --
+   pick the word that can replace the bracketed word without changing meaning,
+   rather than simple definition matching. */
+function genChnVocabSubstitution(level, diff) {
+  var sets = [
+    { text: '他做事一向很【谨慎】，从不马虎。\n(He always does things very ___, never carelessly.)', a: '小心', w: ['大胆', '着急', '骄傲'],
+      e: '【谨慎】(jǐnshèn) means "careful/cautious", closest in meaning to 小心 (xiǎoxīn, careful). 大胆 means bold, 着急 means anxious, 骄傲 means proud — none share the meaning of 谨慎.' },
+    { text: '看到朋友伤心，她感到十分【难过】。\n(Seeing her friend sad, she felt very ___.)', a: '伤心', w: ['开心', '好奇', '生气'],
+      e: '【难过】(nánguò) means "sad/upset", closest in meaning to 伤心 (shāngxīn, sad). 开心 means happy, 好奇 means curious, 生气 means angry — all different emotions from 难过.' },
+    { text: '这道数学题非常【简单】，我一下子就做完了。\n(This math question is very ___, I finished it in no time.)', a: '容易', w: ['困难', '有趣', '重要'],
+      e: '【简单】(jiǎndān) means "simple/easy", closest in meaning to 容易 (róngyì, easy). 困难 means difficult (the opposite!), 有趣 means interesting, 重要 means important — none match the meaning of 简单.' },
+    { text: '他【立刻】把消息告诉了大家。\n(He ___ told everyone the news.)', a: '马上', w: ['慢慢', '偶尔', '仍然'],
+      e: '【立刻】(lìkè) means "immediately", closest in meaning to 马上 (mǎshàng, right away). 慢慢 means slowly, 偶尔 means occasionally, 仍然 means still — none convey the same immediacy as 立刻.' },
+    { text: '妈妈【经常】提醒我要多喝水。\n(Mother ___ reminds me to drink more water.)', a: '常常', w: ['很少', '刚刚', '从来'],
+      e: '【经常】(jīngcháng) means "often/frequently", closest in meaning to 常常 (chángcháng, often). 很少 means rarely, 刚刚 means just now, and 从来 (usually paired with 不/没有) means never — none match the frequency meaning of 经常.' }
+  ];
+  var s = pickNoRepeat('chnVocabSub', sets);
+  var allOpts = shuffle([s.a].concat(s.w));
+  return { text: '选出可以替换【】中词语的选项：\nChoose the word that can best replace the word in 【】without changing the meaning:\n\n' + s.text,
+    options: allOpts, answer: allOpts.indexOf(s.a), category: 'Chinese', diffLevel: diff, source: 'local',
+    heuristic: 'Vocabulary Substitution (词语替换)', explanation: s.e };
+}
+
+/* Chinese: Sentence Structure / 句型转换 (P5+, high difficulty only) --
+   transform between 把字句 and 被字句, rather than word-order/idiom drills. */
+function genChnSentenceStructure(level, diff) {
+  var sets = [
+    { original: '妈妈把碗洗干净了。\n(Mother washed the bowl clean.)', instruction: '改成"被"字句 (Change to a 被-sentence)',
+      a: '碗被妈妈洗干净了。', w: ['妈妈被碗洗干净了。', '碗把妈妈洗干净了。', '妈妈把碗被洗干净了。'],
+      e: 'In a 被-sentence, the RECEIVER of the action (碗, the bowl) moves to the front, followed by 被 + the doer (妈妈) + the verb phrase: 碗被妈妈洗干净了。The bowl cannot be the one doing the washing, so options that swap 妈妈 and 碗 incorrectly are wrong.' },
+    { original: '哥哥打破了花瓶。\n(Older brother broke the vase.)', instruction: '改成"把"字句 (Change to a 把-sentence)',
+      a: '哥哥把花瓶打破了。', w: ['花瓶把哥哥打破了。', '哥哥把打破了花瓶。', '花瓶把打破了哥哥。'],
+      e: 'In a 把-sentence, the DOER stays first, followed by 把 + the object being acted on (花瓶) + the verb phrase: 哥哥把花瓶打破了。The object 花瓶 must come right after 把, not after the verb.' },
+    { original: '猫追老鼠。\n(The cat chases the mouse.)', instruction: '改成"被"字句 (Change to a 被-sentence)',
+      a: '老鼠被猫追。', w: ['猫被老鼠追。', '老鼠把猫追。', '被老鼠追猫。'],
+      e: 'The one being chased (老鼠, the mouse) is the receiver, so it comes first in a 被-sentence: 老鼠被猫追 (the mouse is chased by the cat). Swapping 猫 and 老鼠 reverses who is doing the chasing.' },
+    { original: '老师表扬了小明。\n(The teacher praised Xiao Ming.)', instruction: '改成"把"字句 (Change to a 把-sentence)',
+      a: '老师把小明表扬了。', w: ['小明把老师表扬了。', '老师把表扬了小明。', '把老师表扬了小明。'],
+      e: 'The doer (老师, the teacher) stays first, followed by 把 + the receiver (小明) + the verb: 老师把小明表扬了。把 must be followed directly by the object 小明, not left before the verb with the object placed after.' }
+  ];
+  var s = pickNoRepeat('chnSentenceStructure', sets);
+  var allOpts = shuffle([s.a].concat(s.w));
+  return { text: '句型转换：' + s.instruction + '\n\n' + s.original,
+    options: allOpts, answer: allOpts.indexOf(s.a), category: 'Chinese', diffLevel: diff, source: 'local',
+    heuristic: 'Sentence Structure (句型转换)', explanation: s.e };
+}
+
 /* Chinese: Sentence word-ordering (P4+) — procedural */
 function genChnSentenceOrder(level, diff) {
   var sets = [
@@ -6085,6 +6349,11 @@ function generateQuestionLocal(level, category) {
       if (level >= 4) pool.push(genMathStatistics, genMathAverage);
       if (level >= 5) pool.push(genMathPercent, genMathRatio, genMathRate, genMathHCFLCM);
       if (level >= 6) pool.push(genMathSpeed, genMathAlgebra, genMathNegative, genMathFractionRemainder, genMathPercentChange);
+      /* Named PSLE heuristics -- only enter the pool at high difficulty, so raising
+         difficulty changes problem STRUCTURE (bar-model heuristics), not just the
+         size of the numbers inside the same simple template. */
+      if (level >= 4 && diff >= 4) pool.push(genMathWorkingBackwards, genMathConstantTotal);
+      if (level >= 5 && diff >= 4) pool.push(genMathConstantDifference, genMathUnitsModel);
       var fn = pickAdaptive(pool, category);
       var q = fn(level, diff);
       q.skill = SKILL_LABELS[fn.name] || fn.name;
@@ -6095,6 +6364,8 @@ function generateQuestionLocal(level, category) {
       if (level >= 2) pool.push(genSciLifeCycle, genSciMicroorganisms, genSciLifeCycleDiagram);
       if (level >= 3) pool.push(genSciMagnet);
       if (level >= 4) pool.push(genSciBody, genSciEnergy, genSciForces, genSciReasoning, genSciElectromagnet);
+      /* Fair Testing / CER: application & experimental-design skills, not recall. */
+      if (level >= 4 && diff >= 4) pool.push(genSciFairTesting, genSciCER);
       var fn = pickAdaptive(pool, category);
       var q = fn(level, diff);
       q.skill = SKILL_LABELS[fn.name] || fn.name;
@@ -6105,6 +6376,8 @@ function generateQuestionLocal(level, category) {
       if (level >= 2) pool.push(genEngSVA, genEngPrep, genEngPrepInput, genEngEditing, genEngEditingInput, genEngPictureComposition);
       if (level >= 3) pool.push(genEngComprehension, genEngSynthesis, genEngNotice);
       if (level >= 4) pool.push(genEngPhrasal, genEngGrammarChoice, genEngInference);
+      /* PSLE-level Synthesis & Transformation, subtle vocabulary-in-context. */
+      if (level >= 5 && diff >= 4) pool.push(genEngSynthesisAdvanced, genEngVocabContext);
       var fn = pickAdaptive(pool, category);
       var q = fn(level, diff);
       q.skill = SKILL_LABELS[fn.name] || fn.name;
@@ -6115,6 +6388,8 @@ function generateQuestionLocal(level, category) {
       if (level >= 2) pool.push(genChnSentence);
       if (level >= 3) pool.push(genChnComprehension, genChnSentenceOrder, genChnCloze, genChnCollocation);
       if (level >= 4) pool.push(genChnIdiom);
+      /* 词语替换 (vocabulary substitution), 句型转换 (sentence-structure transform). */
+      if (level >= 5 && diff >= 4) pool.push(genChnVocabSubstitution, genChnSentenceStructure);
       var fn = pickAdaptive(pool, category);
       var q = fn(level, diff);
       q.skill = SKILL_LABELS[fn.name] || fn.name;
@@ -6252,7 +6527,26 @@ async function generateQuestionAI(level, category) {
     ? '\n- This question should be a PICTURE question: also include an "imagePrompt" field describing a simple, clean, textbook-style illustration or diagram to generate for it (e.g. a bar graph with specific values, a set of shapes, a clock face, a scene with countable objects). The image must NOT contain any text, letters, numbers or labels -- image models render text unreliably. IMPORTANT: image generation sometimes fails and the picture may never actually reach the student, so the "text" field must restate every fact the student needs (the values, counts, shapes, or labels the picture would show) and the question must be fully answerable from "text" and "options" ALONE, with the picture only as a helpful illustration -- never as the only source of a needed number or detail.'
     : '';
 
-  var prompt = 'Generate a single question for a Singapore Primary ' + level + ' student in the category "' + category + '" at difficulty level ' + diffTier + ' out of 5: ' + DIFF_TIER_HINTS[diffTier] + weaknessInfo + skillBreakdown + noRepeatHint + examExemplarHint + '\n\nIMPORTANT RULES:\n- Match the stated difficulty level precisely -- do NOT default to an easy question regardless of the level number.\n- Align with Singapore MOE syllabus\n- For Chinese category: include Chinese characters with pinyin and English translations\n- For Math: use Singapore context (dollars, local names like Wei Ming, Aisha, Ravi)\n- Make the question age-appropriate for a ' + (6 + level) + ' year old, but do not water down the difficulty tier above just because of age\n- The "explanation" must be a clear, step-by-step solution written in simple language a ' + (6 + level) + ' year old can follow: short sentences, define any technical term the first time it is used, and show the working (not just the final answer)\n- Most of the time, use "mcq" type with exactly 4 options. Occasionally (about 1 in 4 questions), use "input" type for a short typed answer (e.g. a number, a single word, or a short fill-in-the-blank) instead of multiple choice.\n- Include a short "skill" field naming the specific topic this question tests (e.g. "Fractions", "Past Tense Verbs") -- reuse one of the topic names above if applicable, or name a new one.\n- Include a short "hint" field: ONE sentence giving a strategy or approach nudge that helps the student work toward the answer themselves -- it must NOT state, restate, or clearly imply the final answer (do not put any number or word in the hint that would let the student skip solving it).' + imageInstruction + '\n\nRespond ONLY in this exact JSON format, no other text:\nFor multiple-choice: {"type":"mcq","skill":"topic name","hint":"strategy nudge, no answer","text":"question text","options":["A","B","C","D"],"answer":0,"explanation":"step by step explanation"' + (wantsPicture ? ',"imagePrompt":"image description, no text in the image"' : '') + '}\nFor typed answer: {"type":"input","skill":"topic name","hint":"strategy nudge, no answer","text":"question text with a blank","acceptedAnswers":["accepted answer","another accepted variant"],"explanation":"step by step explanation"' + (wantsPicture ? ',"imagePrompt":"image description, no text in the image"' : '') + '}\n\nFor "mcq", the "answer" field must be the 0-based index of the correct option. For "input", "acceptedAnswers" must list every reasonable variant of the correct answer (e.g. different capitalisation is fine, but list numeric and word forms separately if both are acceptable).';
+  /* Subject-depth instructions -- only kick in in earnest at diffTier >= 4, mirroring
+     the local generators' diff>=4 gate for named heuristics, so low/mid difficulty AI
+     questions stay accessible while high difficulty genuinely tests MOE/PSLE rigor
+     (named heuristics, CER, real transformation structures) instead of just bigger
+     numbers in the same simple template. */
+  var wantsDeepStructure = diffTier >= 4;
+  var subjectDepthInstruction = '';
+  if (category === 'Math') {
+    subjectDepthInstruction = '\n- For Math: use Singapore context (dollars, local names like Wei Ming, Aisha, Ravi).';
+    if (wantsDeepStructure) subjectDepthInstruction += '\n- This is a MATH question at high difficulty: it MUST also use one named Singapore heuristic -- Model Method (Units & Parts), Constant Difference, Constant Total, Working Backwards, or Equal Concepts. Pick ONE, name it in a "heuristic" field (e.g. "Constant Total"), and write "explanation" using bar-model/units language ("1 unit = ...", "Total units = ...") -- NOT a plain list of arithmetic steps.';
+  } else if (category === 'Science' && level >= 3 && wantsDeepStructure) {
+    subjectDepthInstruction = '\n- This is a SCIENCE question at high difficulty: it MUST be an APPLICATION or EXPERIMENTAL SCENARIO, never a direct recall/definition question. If the scenario describes an experiment, require identifying the independent/dependent/control variable or what makes it a fair test, OR structure it as CER (Claim -> Evidence -> Reasoning) -- name whichever applies in a "heuristic" field (e.g. "Fair Testing (Variables)" or "CER (Claim-Evidence-Reasoning)"). Use at least one genuine MOE keyword relevant to the topic (e.g. "good conductor of heat", "rate of evaporation", "open/closed circuit", "fair test").';
+  } else if (category === 'English' && wantsDeepStructure) {
+    subjectDepthInstruction = '\n- This is an ENGLISH question at high difficulty: prefer Synthesis & Transformation using a genuine PSLE structure (e.g. "Despite...", "Unless...", "Having been...", a relative clause with "who/which/that") over simple conjunction-joining, OR subtle vocabulary-in-context (near-synonyms in a full sentence, not an obvious opposite), OR a named grammar rule (subject-verb agreement, relative clauses). Name the structure/rule in a "heuristic" field (e.g. "Synthesis & Transformation").';
+  } else if (category === 'Chinese') {
+    subjectDepthInstruction = '\n- For Chinese category: include Chinese characters with pinyin and English translations.';
+    if (wantsDeepStructure) subjectDepthInstruction += '\n- This is a CHINESE question at high difficulty: prefer 词语替换 (vocabulary substitution -- pick a word that can replace a given word in a sentence without changing its meaning), 句型结构/句型转换 (sentence-structure transformation, e.g. 把字句/被字句), or a 成语 used correctly in a full sentence context -- over simple pinyin or isolated definition matching. Name which of these in a "heuristic" field (e.g. "Vocabulary Substitution (词语替换)").';
+  }
+
+  var prompt = 'Generate a single question for a Singapore Primary ' + level + ' student in the category "' + category + '" at difficulty level ' + diffTier + ' out of 5: ' + DIFF_TIER_HINTS[diffTier] + weaknessInfo + skillBreakdown + noRepeatHint + examExemplarHint + '\n\nIMPORTANT RULES:\n- Match the stated difficulty level precisely -- do NOT default to an easy question regardless of the level number.\n- Align with Singapore MOE syllabus' + subjectDepthInstruction + '\n- Make the question age-appropriate for a ' + (6 + level) + ' year old, but do not water down the difficulty tier above just because of age\n- The "explanation" must be a clear, step-by-step solution written in simple language a ' + (6 + level) + ' year old can follow: short sentences, define any technical term the first time it is used, and show the working (not just the final answer)\n- Most of the time, use "mcq" type with exactly 4 options. Occasionally (about 1 in 4 questions), use "input" type for a short typed answer (e.g. a number, a single word, or a short fill-in-the-blank) instead of multiple choice.\n- Include a short "skill" field naming the specific topic this question tests (e.g. "Fractions", "Past Tense Verbs") -- reuse one of the topic names above if applicable, or name a new one.\n- Include a short "hint" field: ONE sentence giving a strategy or approach nudge that helps the student work toward the answer themselves -- it must NOT state, restate, or clearly imply the final answer (do not put any number or word in the hint that would let the student skip solving it).' + imageInstruction + '\n\nRespond ONLY in this exact JSON format, no other text:\nFor multiple-choice: {"type":"mcq","skill":"topic name","hint":"strategy nudge, no answer","text":"question text","options":["A","B","C","D"],"answer":0,"explanation":"step by step explanation"' + (wantsDeepStructure ? ',"heuristic":"named heuristic/structure used, or omit if none applies"' : '') + (wantsPicture ? ',"imagePrompt":"image description, no text in the image"' : '') + '}\nFor typed answer: {"type":"input","skill":"topic name","hint":"strategy nudge, no answer","text":"question text with a blank","acceptedAnswers":["accepted answer","another accepted variant"],"explanation":"step by step explanation"' + (wantsDeepStructure ? ',"heuristic":"named heuristic/structure used, or omit if none applies"' : '') + (wantsPicture ? ',"imagePrompt":"image description, no text in the image"' : '') + '}\n\nFor "mcq", the "answer" field must be the 0-based index of the correct option. For "input", "acceptedAnswers" must list every reasonable variant of the correct answer (e.g. different capitalisation is fine, but list numeric and word forms separately if both are acceptable).';
 
   /* Check AI cache first */
   var cached = getCachedAIQuestion(level, category, diff);
@@ -6275,6 +6569,8 @@ async function generateQuestionAI(level, category) {
         ? parsed.hint.trim() : SKILL_HINTS_FALLBACK;
       var imagePrompt = (typeof parsed.imagePrompt === 'string' && parsed.imagePrompt.trim())
         ? parsed.imagePrompt.trim() : null;
+      var heuristic = (typeof parsed.heuristic === 'string' && parsed.heuristic.trim())
+        ? parsed.heuristic.trim().slice(0, 60) : undefined;
 
       var candidate;
       if (parsed.type === 'input') {
@@ -6285,6 +6581,7 @@ async function generateQuestionAI(level, category) {
           type: 'input',
           skill: skill,
           hint: hint,
+          heuristic: heuristic,
           text: parsed.text,
           acceptedAnswers: parsed.acceptedAnswers.map(String),
           displayAnswer: String(parsed.acceptedAnswers[0]),
@@ -6302,6 +6599,7 @@ async function generateQuestionAI(level, category) {
           type: 'mcq',
           skill: skill,
           hint: hint,
+          heuristic: heuristic,
           text: parsed.text,
           options: parsed.options,
           answer: parsed.answer,
@@ -6710,6 +7008,12 @@ async function renderQuestion() {
       (q.school ? '<div class="exam-source-meta">' + q.school + (q.term ? ' &middot; ' + q.term : '') + '</div>' : '');
   } else {
     sourceEl.innerHTML = '<span class="source-tag local"><span class="dot"></span>Local</span>';
+  }
+  /* Named heuristic/framework tag (Model Method, Fair Testing, CER, etc.) --
+     shown for both local and AI questions when set, same visual pattern as the
+     exam school/term meta line above. */
+  if (q.heuristic) {
+    sourceEl.innerHTML += '<div class="exam-source-meta">Heuristic: ' + q.heuristic + '</div>';
   }
 
   document.getElementById('q-text').textContent = q.text;
