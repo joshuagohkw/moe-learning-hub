@@ -1,4 +1,4 @@
-var CACHE_NAME = 'sg-learning-hub-v48';
+var CACHE_NAME = 'sg-learning-hub-v49';
 var URLS_TO_CACHE = [
   './',
   './index.html',

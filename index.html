@@ -164,6 +164,18 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .resume-banner .resume-banner-text { font-size: 0.95rem; }
 .resume-banner .resume-banner-text strong { display: block; font-size: 1.05rem; margin-bottom: 2px; }
 .resume-banner .submit-btn { padding: 10px 24px; min-width: auto; font-size: 0.95rem; }
+.ai-nudge-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  background: var(--card); border: 2px dashed var(--accent);
+  border-radius: var(--radius); padding: 14px 20px; box-shadow: var(--shadow);
+  margin-top: 20px; cursor: pointer;
+}
+.ai-nudge-banner .ai-nudge-text { font-size: 0.9rem; color: var(--text); }
+.ai-nudge-dismiss {
+  background: none; border: none; font-size: 1.3rem; line-height: 1; cursor: pointer;
+  color: var(--text2); padding: 2px 8px; flex-shrink: 0;
+}
+.ai-nudge-dismiss:hover { color: var(--text); }
 
 /* ============================================================
    CSS: QUIZ SCREEN
@@ -754,6 +766,10 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   </div>
   <div class="home-pet-chip" id="home-pet-chip" onclick="showScreen('pet')"></div>
   <div class="resume-banner" id="resume-banner" style="display:none"></div>
+  <div class="ai-nudge-banner" id="ai-nudge-banner" style="display:none" onclick="showScreen('settings')">
+    <div class="ai-nudge-text">✨ <strong>Try AI-generated questions</strong> — tap to set up (needs your own free API key)</div>
+    <button class="ai-nudge-dismiss" onclick="dismissAINudge(event)" aria-label="Dismiss">&times;</button>
+  </div>
   <div class="level-grid" id="level-grid"></div>
 </div>
 
@@ -1112,6 +1128,7 @@ function getDefaultStore() {
     onboardingDone: false,
     badges: {},
     perfectSessions: 0,
+    aiBannerDismissed: false,
     aiEnabled: false,
     aiProvider: 'gemini',
     apiKey: '',
@@ -1406,7 +1423,7 @@ function showScreen(name) {
   document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
   document.getElementById('screen-' + name).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
-  if (name === 'home') { document.getElementById('nav-home').classList.add('active'); renderHomePetChip(); renderResumeBanner(); }
+  if (name === 'home') { document.getElementById('nav-home').classList.add('active'); renderHomePetChip(); renderResumeBanner(); renderAINudgeBanner(); }
   if (name === 'pet') {
     document.getElementById('nav-pet').classList.add('active');
     renderPet();
@@ -6534,6 +6551,21 @@ function renderResumeBanner() {
     '<button class="submit-btn" onclick="resumeActiveSession()">Continue Quiz</button>';
 }
 
+/* Nudges parents/students toward the AI question-generation feature, which
+   otherwise lives silently inside Settings with no other hint it exists.
+   Hidden once AI is turned on (nothing left to nudge about) or dismissed. */
+function renderAINudgeBanner() {
+  var banner = document.getElementById('ai-nudge-banner');
+  if (!banner) return;
+  banner.style.display = (!store.aiEnabled && !store.aiBannerDismissed) ? '' : 'none';
+}
+function dismissAINudge(event) {
+  event.stopPropagation();
+  store.aiBannerDismissed = true;
+  saveStore(store);
+  renderAINudgeBanner();
+}
+
 async function startSession(level) {
   var inProgress = getResumableSession();
   if (inProgress) {
@@ -7392,6 +7424,7 @@ applyPetDecay();
 renderLevelGrid();
 renderHomePetChip();
 renderResumeBanner();
+renderAINudgeBanner();
 initPetEyeTracking();
 maybeShowOnboarding();
 
