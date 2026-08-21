@@ -6333,6 +6333,16 @@ async function generateQuestionAI(level, category) {
       }
     }
 
+    /* Guard against the model writing a picture-dependent question ("Look at the
+       picture, there is one cute ___...") despite the prompt's explicit rule that
+       "text" must stand alone -- models don't always comply, and if no image ended
+       up attached (never requested, or generation failed above), the question would
+       be unanswerable since the described detail exists nowhere else. Discard and
+       fall back to local rather than serve a student a dead-end question. */
+    if (!result.image && /\b(the|this|that|above|below)\s+(picture|image|photo|diagram|illustration|figure)\b/i.test(result.text)) {
+      throw new Error('AI question text depends on a picture that was never attached');
+    }
+
     /* Log this question into the AI cache as ALREADY used -- it's about to be shown to
        the student right now, so it must never be eligible for getCachedAIQuestion() to
        hand back out again later (that was the actual cause of AI-mode repeat questions:
