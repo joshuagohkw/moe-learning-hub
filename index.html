@@ -456,17 +456,28 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .pet-pill-tier { background: var(--danger); }
 
 .pet-stage-roadmap {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-  gap: 10px;
+  /* Always exactly PET_STAGES.length chips -- the column count is set inline by
+     renderPet() from PET_STAGES.length, so a fixed grid keeps them on one row at
+     any width instead of auto-fit wrapping into an uneven split, while staying
+     correct if PET_STAGES is ever rebalanced to a different number of stages. */
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+@media (max-width: 420px) {
+  /* Below this width even a fixed grid squeezes each chip's art/text past a
+     readable size for young children -- switch to a horizontally scrollable
+     strip of comfortably-sized chips instead of shrinking them further. */
+  .pet-stage-roadmap { display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .pet-stage-chip { flex: 0 0 72px; }
 }
 .pet-stage-chip {
-  background: var(--card); border-radius: 12px; padding: 10px 6px;
-  text-align: center; box-shadow: var(--shadow);
+  background: var(--card); border-radius: 12px; padding: 10px 4px;
+  text-align: center; box-shadow: var(--shadow); overflow: hidden;
   opacity: 0.4; filter: grayscale(1);
 }
 .pet-stage-chip.reached { opacity: 1; filter: none; }
 .pet-stage-chip.mystery:not(.reached) { border: 2px dashed var(--accent); color: var(--text2); }
-.pet-stage-chip-art { width: 56px; height: 56px; margin: 0 auto; }
+.pet-stage-chip-art { width: 56px; max-width: 100%; aspect-ratio: 1 / 1; margin: 0 auto; }
 .pet-stage-chip-art svg { width: 100%; height: 100%; }
 .pet-stage-chip span { display: block; font-size: 0.72rem; font-weight: 700; margin-top: 4px; color: var(--text2); }
 .pet-stage-chip .pet-stage-range { font-weight: 400; }
@@ -803,7 +814,7 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 <div class="screen" id="screen-collection">
   <div class="dash-section">
     <h3>🏆 Pet Collection</h3>
-    <p style="font-size:0.9rem;color:var(--text2);margin-bottom:14px">Every Mystery Pet your family has ever discovered at Level 41 -- kept forever, even if you reset progress.</p>
+    <p style="font-size:0.9rem;color:var(--text2);margin-bottom:14px">Every Mystery Pet your family has ever discovered at Level 81 -- kept forever, even if you reset progress.</p>
     <p style="font-size:0.9rem;color:var(--text2);margin-bottom:14px" id="collection-progress"></p>
     <div class="pet-collection-grid" id="collection-grid"></div>
   </div>
@@ -1069,7 +1080,7 @@ function loadStore() {
       /* Existing saves that already have session history or pet progress skip the
          new onboarding picker entirely -- it's only for genuinely fresh installs. */
       d.onboardingDone = d.onboardingDone === true || d.pet.xp > 0 || (d.sessions && d.sessions.length > 0);
-      /* NOTE: retroactive mystery-pet migration for existing level-41+ saves happens
+      /* NOTE: retroactive mystery-pet migration for existing level-81+ saves happens
          at app init (bottom of script), not here -- MYSTERY_PETS/pickMysteryPet
          aren't assigned yet this early in the script's top-to-bottom execution,
          since loadStore() itself runs before that later `var` statement runs. */
@@ -1208,7 +1219,7 @@ function launchConfetti() {
 
 /* ============================================================
    JS: END-OF-SESSION CELEBRATION QUEUE (badges + pet popups)
-   Badge unlocks, pet level-ups, and the Level 41 mystery reveal can all fire
+   Badge unlocks, pet level-ups, and the Level 81 mystery reveal can all fire
    from the same endSession() call (e.g. a perfect first session unlocks
    "First Steps" AND levels the pet up). They share ONE queue so only ever
    one overlay shows at a time, in sequence, instead of stacking visually.
@@ -1245,7 +1256,7 @@ function showNextCelebration() {
     if (!cfg) { showNextCelebration(); return; }
     var petName = (store.pet && store.pet.name) || 'Buddy';
     document.getElementById('plu-title').textContent = '✨ MYSTERY EVOLUTION! ✨';
-    document.getElementById('plu-icon').innerHTML = buildMysteryPetSVG(item.data, 41, { interactive: false });
+    document.getElementById('plu-icon').innerHTML = buildMysteryPetSVG(item.data, MYSTERY_EVOLUTION_LEVEL, { interactive: false });
     document.getElementById('plu-name').textContent = petName + ' evolved into ' + cfg.name + '!';
     document.getElementById('plu-desc').textContent = cfg.flavor;
     document.getElementById('pet-levelup-overlay').classList.add('show');
@@ -1271,7 +1282,7 @@ function closeBadgePopup() { closeCelebration(); }
    ============================================================ */
 function showPetLevelUpPopup(newLevel) { queueCelebration('petLevelUp', newLevel); }
 function closePetLevelUpPopup() { closeCelebration(); }
-/* The one-time Level 41 reveal -- queued alongside badges/level-ups so it
+/* The one-time Level 81 reveal -- queued alongside badges/level-ups so it
    never visually collides with them. */
 function showMysteryEvolutionPopup(petId) { queueCelebration('mysteryEvolution', petId); }
 
@@ -1967,23 +1978,40 @@ var PET_SHOP_ITEMS = [
   { id: 'puzzle', name: 'Puzzle Toy',  emoji: '🧩', type: 'toy',  cost: 40, happinessFill: 40 },
   { id: 'party',  name: 'Party Time',  emoji: '🎉', type: 'toy',  cost: 80, happinessFill: 80 }
 ];
-/* 3 conceptual stages: Egg/Hatchling grow as the dragon form (levels 1-40), then
-   a single "Mystery Pet" stage spans 41-100 -- what that actually looks like is
-   decided once, at Level 41, by the mystery evolution (see below). */
+/* 5 conceptual stages: Egg/Hatchling/Fledgling/Young Dragon grow as the dragon form
+   (levels 1-80) -- petStageIndexAndGrowth derives its art-stage boundaries from this
+   array's `max` values, so the two stay in sync automatically. A final "Mystery Pet"
+   stage spans 81-100 -- what that actually looks like is decided once, at Level 81,
+   by the mystery evolution (see below). */
 var PET_STAGES = [
   { max: 20, name: 'Egg', blurb: 'Still growing inside its egg...' },
   { max: 40, name: 'Hatchling', blurb: 'Just hatched and taking its first steps!' },
-  { max: 100, name: '??? Mystery Pet', blurb: 'A rare surprise evolution awaits at Level 41...' }
+  { max: 60, name: 'Fledgling', blurb: 'Growing stronger and starting to explore!' },
+  { max: 80, name: 'Young Dragon', blurb: 'Almost fully grown -- something SPECIAL is coming soon...' },
+  { max: 100, name: '??? Mystery Pet', blurb: 'A rare surprise evolution awaits at Level 81...' }
 ];
+/* Single source of truth for the mystery-evolution level, so a future rebalance only
+   needs to change PET_STAGES instead of hunting down every call site -- derived as
+   "one past the Young Dragon stage's max" (the last entry before the Mystery Pet
+   stage itself), so moving that boundary automatically moves the evolution trigger. */
+var MYSTERY_EVOLUTION_LEVEL = PET_STAGES[PET_STAGES.length - 2].max + 1;
 function getPetStage(level) {
   for (var i = 0; i < PET_STAGES.length; i++) if (level <= PET_STAGES[i].max) return PET_STAGES[i];
   return PET_STAGES[PET_STAGES.length - 1];
 }
-/* Like getPetStage, but once the Level 41 mystery evolution has happened, this
-   returns the REVEALED pet's real name/flavour instead of the "???" placeholder --
-   used everywhere the pet's name/blurb is displayed to the student. */
+/* The one canonical "has this pet evolved" check -- mysteryPetId alone, never the
+   current level, so a pet that evolved under an earlier, lower threshold stays
+   revealed (name, art, style-picker, roadmap unlock state, ...) after a rebalance
+   raises MYSTERY_EVOLUTION_LEVEL. Every other evolved/not-evolved check in the pet
+   UI should call this rather than re-deriving its own level-based condition. */
+function petIsEvolved() {
+  return !!(store.pet && store.pet.mysteryPetId);
+}
+/* Like getPetStage, but once the mystery evolution has happened, this returns the
+   REVEALED pet's real name/flavour instead of the "???" placeholder -- used
+   everywhere the pet's name/blurb is displayed to the student. */
 function getPetDisplayInfo(level) {
-  if (level >= 41 && store.pet && store.pet.mysteryPetId) {
+  if (petIsEvolved()) {
     var cfg = getMysteryPetConfig(store.pet.mysteryPetId);
     if (cfg) return { name: cfg.name, blurb: cfg.flavor };
   }
@@ -1999,7 +2027,7 @@ function getPetDisplayInfo(level) {
    instance (#pet-emoji) can track the mouse cursor.
    ============================================================ */
 function petStageIndexAndGrowth(level) {
-  var bounds = [20, 40, 60, 80, 100];
+  var bounds = PET_STAGES.map(function(s) { return s.max; });
   var prevMax = 0;
   for (var i = 0; i < bounds.length; i++) {
     if (level <= bounds[i]) {
@@ -2076,14 +2104,15 @@ function petTearsSVG(lx, ly, rx, ry) {
 function buildPetSVG(level, opts) {
   opts = opts || {};
   var mood = opts.mood || 'neutral';
-  /* At Level 41+, once the mystery evolution has happened, render the revealed
-     pet instead of continuing the dragon form. If somehow level>=41 but no
-     mysteryPetId exists yet (shouldn't normally happen -- assigned the moment
-     the level is crossed), fall through to the dragon art below as a safe default. */
-  if (level >= 41) {
-    var mpId = opts.mysteryPetId || (typeof store !== 'undefined' && store.pet && store.pet.mysteryPetId);
-    if (mpId) return buildMysteryPetSVG(mpId, level, opts);
-  }
+  /* Once the mystery evolution has happened (mysteryPetId assigned), always render
+     the revealed pet instead of the dragon form -- checked on mysteryPetId alone,
+     not on the current level, so a pet that evolved under an earlier build's lower
+     threshold stays revealed even if a later rebalance raises MYSTERY_EVOLUTION_LEVEL.
+     opts.forceDragonForm bypasses this -- used by the stage roadmap's historical
+     Egg/Hatchling/Fledgling/Young Dragon previews, which must always show the dragon
+     art for those stages even after the real pet has evolved past them. */
+  var mpId = !opts.forceDragonForm && (opts.mysteryPetId || (typeof store !== 'undefined' && store.pet && store.pet.mysteryPetId));
+  if (mpId) return buildMysteryPetSVG(mpId, level, opts);
   var style = opts.style || (typeof store !== 'undefined' && store.pet && store.pet.style) || 'cute';
   var isCool = style === 'cool';
   var sg = petStageIndexAndGrowth(level);
@@ -2159,13 +2188,11 @@ function buildPetSVG(level, opts) {
       '<circle cx="100" cy="72" r="40" fill="' + c.body + '" stroke="' + c.outline + '" stroke-width="3"/>';
 
     if (stage === 1 && growth > 0.75) {
-      /* Wing buds: real wings (stage>=2) are only ever reached as a rare data-
-         inconsistency fallback since the mystery evolution at level 41 replaces
-         this whole body plan -- so a Hatchling nearing level 40 would otherwise
-         stay visually flat for its entire second half. These small nubs (drawn on
-         top of the body, unlike the full wings above which tuck slightly behind it)
-         foreshadow the wings-to-come and give the last stretch before evolution its
-         own beat. */
+      /* Wing buds: shown in the last quarter of the Hatchling stage (level ~36-40),
+         just before stage 2 (Fledgling, level 41+) brings the full wings drawn
+         above. These small nubs (drawn on top of the body, unlike the full wings
+         which tuck slightly behind it) foreshadow the wings-to-come and give the
+         last stretch before the next stage its own beat. */
       inner +=
         '<ellipse cx="52" cy="100" rx="11" ry="16" fill="' + c.accent + '" opacity="0.85" stroke="' + c.outline + '" stroke-width="1.5" transform="rotate(-25 52 100)"/>' +
         '<ellipse cx="148" cy="100" rx="11" ry="16" fill="' + c.accent + '" opacity="0.85" stroke="' + c.outline + '" stroke-width="1.5" transform="rotate(25 148 100)"/>';
@@ -2273,8 +2300,8 @@ function showPetSpeechBubble(msg, elId) {
   el._petBubbleTimeout = setTimeout(function() { el.classList.remove('show'); }, 1400);
 }
 /* ============================================================
-   JS: MYSTERY PET EVOLUTION (Level 41)
-   At level 41 the pet's growth path branches: instead of continuing along the
+   JS: MYSTERY PET EVOLUTION (Level 81)
+   At level 81 the pet's growth path branches: instead of continuing along the
    dragon form, it evolves ONCE into one of 20 possible creatures, randomly
    picked from whichever style pool (cute/cool) the student had selected at
    that moment. The choice is permanent and stored in store.pet.mysteryPetId.
@@ -2406,7 +2433,7 @@ var MOTIF_FN_MAP = {
   motifCircuit: motifCircuit, motifGalaxy: motifGalaxy, motifGears: motifGears, motifMoss: motifMoss, motifFoldLines: motifFoldLines,
   motifSnowflakes: motifSnowflakes, motifSunburst: motifSunburst
 };
-/* Simple "?" placeholder shown in the roadmap before the Level 41 mystery evolution happens. */
+/* Simple "?" placeholder shown in the roadmap before the Level 81 mystery evolution happens. */
 function buildMysteryPlaceholderSVG() {
   return '<svg viewBox="0 0 200 200" class="pet-svg" xmlns="http://www.w3.org/2000/svg">' +
     '<circle cx="100" cy="100" r="70" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="9,9" opacity="0.5"/>' +
@@ -2421,7 +2448,7 @@ function buildMysteryPetSVG(petId, level, opts) {
   var mood = opts.mood || 'neutral';
   var cfg = getMysteryPetConfig(petId);
   if (!cfg) return buildMysteryPlaceholderSVG();
-  var overall = Math.max(0, Math.min(1, (level - 41) / (PET_MAX_LEVEL - 41)));
+  var overall = Math.max(0, Math.min(1, (level - MYSTERY_EVOLUTION_LEVEL) / (PET_MAX_LEVEL - MYSTERY_EVOLUTION_LEVEL)));
   var sat = Math.round(cfg.satBase + overall * 20);
   var light = Math.round(cfg.lightBase - overall * 14);
   var body = 'hsl(' + cfg.hue + ',' + sat + '%,' + light + '%)';
@@ -2548,7 +2575,7 @@ function bumpPetCare(hungerDelta, happinessDelta) {
   store.pet.lastUpdated = Date.now();
   var after = getPetLevelInfo(store.pet.xp).level;
   var mysteryRevealedId = null;
-  if (before < 41 && after >= 41 && !store.pet.mysteryPetId) {
+  if (before < MYSTERY_EVOLUTION_LEVEL && after >= MYSTERY_EVOLUTION_LEVEL && !store.pet.mysteryPetId) {
     store.pet.mysteryPetId = pickMysteryPet(store.pet.style || 'cute');
     mysteryRevealedId = store.pet.mysteryPetId;
     /* Record into the permanent collection -- keeps the first-discovery date and
@@ -2583,6 +2610,7 @@ function buyPetItem(itemId) {
   var item = PET_SHOP_ITEMS.filter(function(i) { return i.id === itemId; })[0];
   if (!item || !store.pet || store.pet.points < item.cost) return;
   store.pet.points -= item.cost;
+  store.totalShopPurchases = (store.totalShopPurchases || 0) + 1;
   var award = bumpPetCare(item.hungerFill || 0, item.happinessFill || 0);
   saveStore(store);
   if (award.mysteryPetId) queueCelebration('mysteryEvolution', award.mysteryPetId);
@@ -3871,7 +3899,7 @@ var SCI_ANIMALS = [
   ['shark','fish',0,'water','rough skin','gills','eggs/live','carnivore','Sharks have been around for over 400 million years.'],
   ['clownfish','fish',0,'water','scales','gills','eggs','omnivore','Clownfish live among sea anemone tentacles.'],
   ['salmon','fish',0,'water','scales','gills','eggs','omnivore','Salmon swim upstream to lay eggs.'],
-  ['seahorse','fish',0,'water','bony plates','gills','live','carnivore','Male seahorses carry the babies.'],
+  ['seahorse','fish',0,'water','bony plates','gills','live young','carnivore','Male seahorses carry the babies.'],
   ['butterfly','insect',6,'air/land','tiny scales','spiracles','eggs','herbivore','Butterflies taste with their feet.'],
   ['bee','insect',6,'air/land','fine hair','spiracles','eggs','herbivore','Bees communicate through dance.'],
   ['ant','insect',6,'land','exoskeleton','spiracles','eggs','omnivore','Ants can carry 50 times their body weight.'],
@@ -3980,7 +4008,7 @@ var SCI_ENERGY = [
   ['chemical','a battery','chemical','electrical'],
   ['chemical','petrol/gasoline','chemical','kinetic and heat'],
   ['chemical','firewood','chemical','heat and light'],
-  ['electrical','electricity in wires','chemical','electrical'],
+  ['chemical','a coal-fired power station','chemical','electrical'],
   ['electrical','lightning','electrical','light and heat and sound'],
   ['light','the Sun','nuclear','light and heat'],
   ['light','a light bulb','electrical','light and heat'],
@@ -4052,7 +4080,7 @@ var ENG_IRREG_VERBS = [
   ['catch','caught','caught','the ball'],['dig','dug','dug','a hole'],['draw','drew','drawn','a picture'],
   ['fall','fell','fallen','down'],['feed','fed','fed','the cat'],['feel','felt','felt','happy'],
   ['fight','fought','fought','bravely'],['find','found','found','the keys'],['forget','forgot','forgotten','his homework'],
-  ['freeze','froze','frozen','the water'],['get','got','gotten','a new bag'],['hold','held','held','her hand'],
+  ['freeze','froze','frozen','the water'],['get','got','got','a new bag'],['hold','held','held','her hand'],
   ['keep','kept','kept','a secret'],['lead','led','led','the team'],['leave','left','left','early'],
   ['lose','lost','lost','his wallet'],['make','made','made','a cake'],['meet','met','met','his friend'],
   ['pay','paid','paid','for the ticket'],['sell','sold','sold','the old bike'],['send','sent','sent','a letter'],
@@ -4125,11 +4153,11 @@ var ENG_PREPOSITION_CONTEXTS = [
   ['The school is ___ the bank and the library.','between','among','beside','behind','"Between" for two things.'],
   ['He apologised ___ being late.','for','of','to','about','We say "apologised for" + reason.'],
   ['{name} is interested ___ science.','in','at','on','about','We say "interested in" a topic.'],
-  ['The plane flew ___ the clouds.','through','across','over','along','"Through" means passing inside something.'],
+  ['The plane flew ___ the thick storm clouds, and the cabin suddenly went dark and shaky.','through','across','over','along','"Through" means passing inside something -- the plane flew right into the clouds, which is why the cabin went dark and the ride got bumpy.'],
   ['She walked ___ the bridge to reach the other side.','across','through','along','around','"Across" means from one side to the other.'],
   ['The children played ___ the rain stopped.','until','since','for','while','"Until" means up to the time that.'],
   ['{name} is responsible ___ watering the plants.','for','of','to','about','We say "responsible for" a task.'],
-  ['The shop is ___ to the post office.','next','near','close','beside','"Next to" means directly beside.']
+  ['The shop is ___ to the post office.','next','near','behind','beside','"Next to" means directly beside.']
 ];
 
 /* ---------- CHINESE DATA BANKS ---------- */
@@ -4262,7 +4290,7 @@ var CHN_MEASURE_WORDS = [
 
 var CHN_IDIOMS_BANK = [
   /* [idiom, pinyin, literal, meaning, story, example] */
-  ['一心一意','yìxīnyìyì','one heart one mind','wholeheartedly','','他一心一意地读书。(He studies wholeheartedly.)'],
+  ['一心一意','yìxīnyíyì','one heart one mind','wholeheartedly','','他一心一意地读书。(He studies wholeheartedly.)'],
   ['七上八下','qīshàngbāxià','seven up eight down','feeling anxious','','考试前我心里七上八下。(I felt anxious before the exam.)'],
   ['守株待兔','shǒuzhūdàitù','guard tree wait rabbit','relying on luck instead of hard work','A farmer saw a rabbit hit a tree stump and die. He waited by the stump forever but no more rabbits came.','不能守株待兔，要努力学习。'],
   ['画蛇添足','huàshétiānzú','draw snake add feet','doing something unnecessary','In a snake-drawing competition, the winner added feet to his snake, making it wrong — snakes have no feet!','这样做是画蛇添足。(This is adding feet to a snake.)'],
@@ -4366,10 +4394,10 @@ var SG_NEWS_FACTS = [
   ['Singapore sports star Max Maeder is a world champion in which sport?','Kite foiling (sailing)','Swimming','Badminton','Table tennis','Max Maeder races on water using a kite and a special board. He won an Olympic bronze medal in 2024.'],
   ['Singapore Paralympic champion Yip Pin Xiu has won many gold medals in which sport?','Swimming','Running','Cycling','Shooting','Yip Pin Xiu is a Paralympic swimmer who has won several gold medals for Singapore.'],
   ['In 2026, which Singapore MRT line was completed to form a full loop, like a circle?','Circle Line','Downtown Line','North-East Line','East-West Line','In July 2026, three new stations completed the Circle Line, making it Singapore\'s first MRT line shaped like a full loop.'],
-  ['In 2026, Sentosa\'s sea-life attraction reopened three times bigger with a new name. What is it now called?','Singapore Oceanarium','Underwater World','Marina Aquarium','Jurong Fish World','The former S.E.A. Aquarium reopened in 2026 as the Singapore Oceanarium, three times larger than before.'],
-  ['In 2026, which endangered baby sea animals hatched at the Singapore Oceanarium?','Hawksbill turtles','Dolphins','Penguins','Seahorses','Eight endangered hawksbill turtle hatchlings were welcomed at the Singapore Oceanarium in 2026.'],
+  ['In 2025, Sentosa\'s sea-life attraction reopened three times bigger with a new name. What is it now called?','Singapore Oceanarium','Underwater World','Marina Aquarium','Jurong Fish World','The former S.E.A. Aquarium reopened in July 2025 as the Singapore Oceanarium, three times larger than before.'],
+  ['In 2025, which endangered baby sea animals hatched at the Singapore Oceanarium?','Hawksbill turtles','Dolphins','Penguins','Seahorses','Eight endangered hawksbill turtle hatchlings were welcomed at the Singapore Oceanarium in 2025, as part of a conservation programme with NParks.'],
   ['Which large black-and-white bear can you visit at River Wonders in Singapore?','Giant panda','Polar bear','Sun bear','Grizzly bear','River Wonders at Mandai is home to giant pandas, which come from China and love eating bamboo.'],
-  ['In 2026, Mandai Wildlife Reserve opened a new nature park. What is it called?','Rainforest Wild','Desert World','Snow City','Farm Land','Rainforest Wild lets visitors explore rainforest habitats and see animals up close.'],
+  ['In 2025, Mandai Wildlife Reserve opened a new nature park. What is it called?','Rainforest Wild','Desert World','Snow City','Farm Land','Rainforest Wild ASIA opened to the public in March 2025 and lets visitors explore rainforest habitats and see animals up close.'],
   ['In 2026, Skypark Sentosa opened Southeast Asia\'s tallest dry slides. About how tall are they?','44 metres','4 metres','14 metres','100 metres','The new slides at Skypark Sentosa stand about 44 metres tall — the tallest dry slides in Southeast Asia.'],
   ['In 2026, football fans in Singapore gathered to watch which big worldwide tournament?','The FIFA World Cup','The Olympics','Wimbledon','The Tour de France','The FIFA World Cup 2026 was held in North America, and fans in Singapore watched the matches together.'],
   ['In 2026, Singapore hosted Asia\'s first real-life experience based on which popular video game?','Minecraft','Roblox','Super Mario','Pokemon','Asia\'s first Minecraft Experience opened at Mandai in 2026, turning the venue into a life-sized game world.'],
@@ -4423,7 +4451,7 @@ var BT_ODD_CATEGORIES = [
   ['Addition','Subtraction','Multiplication','Triangle','Triangle is a shape; the others are operations.'],
   ['Butterfly','Bee','Ant','Spider','Spider has 8 legs (arachnid); the others are insects.'],
   ['Oxygen','Nitrogen','Carbon dioxide','Gold','Gold is a metal; the others are gases.'],
-  ['Chicken','Duck','Penguin','Eagle','Eagle is a bird of prey; the others are flightless or domestic.'],
+  ['Sparrow','Pigeon','Eagle','Penguin','Penguin cannot fly; the others are birds that can fly.'],
   ['Eyes','Ears','Nose','Legs','Legs are for movement; the others are sense organs.'],
   ['January','March','May','June','June has 30 days; the others have 31.'],
   ['Cat','Dog','Rabbit','Goldfish','Goldfish is a fish; the others are mammals.'],
@@ -5860,26 +5888,6 @@ function buildVocabIconSVG(iconType) {
   return '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">' + inner + '</svg>';
 }
 
-/* A simple original illustration of the Singapore flag, used by the GK
-   question that asks about the crescent moon shape (needs a visual, unlike
-   the rest of GK_SG_FACTS which is pure recall). */
-function buildSGFlagSVG() {
-  var star = '-4.94,3.4 0,7.94 4.94,3.4 7.94,-2.94 3.06,-2.55 0,-7.94 -3.06,-2.55 -7.94,-2.94';
-  var starPts = '0,-7.94 ' + star;
-  function starAt(cx, cy) {
-    return '<polygon points="' + starPts + '" transform="translate(' + cx + ' ' + cy + ')" fill="#fff"/>';
-  }
-  var stars = [[100, 18], [114.3, 28.4], [108.8, 45.1], [91.2, 45.1], [85.7, 28.4]]
-    .map(function(p) { return starAt(p[0], p[1]); }).join('');
-  var inner =
-    '<rect x="0" y="0" width="200" height="133" fill="#fff" stroke="#cbd5e1" stroke-width="2"/>' +
-    '<rect x="0" y="0" width="200" height="66.5" fill="#ED2939"/>' +
-    '<circle cx="48" cy="33" r="22" fill="#fff"/>' +
-    '<circle cx="58" cy="27" r="22" fill="#ED2939"/>' +
-    stars;
-  return '<svg viewBox="0 0 200 133" xmlns="http://www.w3.org/2000/svg">' + inner + '</svg>';
-}
-
 /* Chinese: Picture Vocabulary (P1+) -- a genuine picture question: look at a
    simple original icon and choose the Chinese word that names it. */
 function genChnPictureVocab(level, diff) {
@@ -5913,7 +5921,7 @@ function genGKSingapore(level, diff) {
   var q = { text: f[0], options: allOpts, answer: allOpts.indexOf(f[1]),
     category: 'General Knowledge', diffLevel: diff, source: 'local', explanation: f[5] };
   if (f[6] === 'flag') {
-    q.image = 'data:image/svg+xml,' + encodeURIComponent(buildSGFlagSVG());
+    q.image = './icons/flag-of-singapore-hd.png';
     q.imageAlt = 'The flag of Singapore: a red band above a white band, with a white crescent moon and five white stars in the upper-left corner.';
   }
   return q;
@@ -6744,6 +6752,7 @@ function resolveQuestion(q, correct, isRetry) {
   if (correct) {
     session.score++;
     playCorrectSound();
+    if (q.image) store.totalPictureQuestions = (store.totalPictureQuestions || 0) + 1;
     store.pet.points = (store.pet.points || 0) + (isRetry ? PET_POINTS_PER_RETRY_CORRECT : PET_POINTS_PER_CORRECT);
     var petAward = bumpPetCare(
       isRetry ? PET_CARE_PER_RETRY_CORRECT : PET_CARE_PER_CORRECT,
@@ -6796,6 +6805,8 @@ function resolveQuestion(q, correct, isRetry) {
    more, without revealing the correct option or finalizing score/XP/stats. */
 function showHintAndAllowRetry(q) {
   session.hintUsed = true;
+  store.totalHintsUsed = (store.totalHintsUsed || 0) + 1;
+  saveStore(store);
   playWrongSound();
 
   if (q.type === 'input') {
@@ -6939,6 +6950,12 @@ function endSession() {
 /* ============================================================
    JS: BADGE SYSTEM
    ============================================================ */
+/* Shared helper for skill-mastery badges: true once a skill has enough attempts
+   (10+, so a lucky short streak can't unlock it) AND a strong accuracy on them. */
+function skillMastered(key, threshold) {
+  var s = store.skillStats[key];
+  return !!s && s.total >= 10 && (s.correct / s.total) >= (threshold || 0.85);
+}
 var BADGE_DEFS = [
   { id: 'first_session', icon: '&#127941;', name: 'First Steps', desc: 'Complete your first session', check: function() { return store.sessions.length >= 1; } },
   { id: 'five_sessions', icon: '&#128170;', name: 'Dedicated Learner', desc: 'Complete 5 sessions', check: function() { return store.sessions.length >= 5; } },
@@ -6953,7 +6970,67 @@ var BADGE_DEFS = [
   { id: 'century', icon: '&#128175;', name: 'Century Club', desc: 'Answer 100 questions correctly', check: function() { return store.totalCorrect >= 100; } },
   { id: 'all_levels', icon: '&#127758;', name: 'Explorer', desc: 'Try all 6 primary levels', check: function() { return new Set(store.sessions.filter(function(s) { return typeof s.level === 'number'; }).map(function(s) { return s.level; })).size >= 6; } },
   { id: 'ai_pioneer', icon: '&#129302;', name: 'AI Pioneer', desc: 'Complete a session with AI questions', check: function() { return store.sessions.some(function(s) { return s.aiQuestions > 0; }); } },
-  { id: 'deejaygee', icon: '&#127935;', name: 'DEEJAYGEE Master Spinner', desc: '???', check: function() { return (store.perfectSessions || 0) >= 5; } }
+  { id: 'deejaygee', icon: '&#127935;', name: 'DEEJAYGEE Master Spinner', desc: '???', check: function() { return (store.perfectSessions || 0) >= 5; } },
+
+  /* --- Session milestones --- */
+  { id: 'sessions_15', icon: '📚', name: 'Bookworm', desc: 'Complete 15 sessions', check: function() { return store.sessions.length >= 15; } },
+  { id: 'sessions_25', icon: '📈', name: 'Quarter Century', desc: 'Complete 25 sessions', check: function() { return store.sessions.length >= 25; } },
+  { id: 'sessions_50', icon: '🏋️', name: 'Half-Century Hero', desc: 'Complete 50 sessions', check: function() { return store.sessions.length >= 50; } },
+  { id: 'sessions_100', icon: '💯', name: 'Centurion Learner', desc: 'Complete 100 sessions', check: function() { return store.sessions.length >= 100; } },
+  { id: 'sessions_150', icon: '🚀', name: 'Unstoppable', desc: 'Complete 150 sessions', check: function() { return store.sessions.length >= 150; } },
+
+  /* --- Perfect-score milestones --- */
+  { id: 'perfect_7', icon: '🌟', name: 'Star Student', desc: 'Get 7 perfect sessions', check: function() { return (store.perfectSessions || 0) >= 7; } },
+  { id: 'perfect_10', icon: '💎', name: 'Diamond Scorer', desc: 'Get 10 perfect sessions', check: function() { return (store.perfectSessions || 0) >= 10; } },
+  { id: 'perfect_25', icon: '👑', name: 'Perfection Royalty', desc: 'Get 25 perfect sessions', check: function() { return (store.perfectSessions || 0) >= 25; } },
+
+  /* --- Correct-answer milestones --- */
+  { id: 'correct_250', icon: '✏️', name: 'Sharp Pencil', desc: 'Answer 250 questions correctly', check: function() { return store.totalCorrect >= 250; } },
+  { id: 'correct_500', icon: '🧠', name: 'Big Brain', desc: 'Answer 500 questions correctly', check: function() { return store.totalCorrect >= 500; } },
+  { id: 'correct_1000', icon: '🏛️', name: 'Knowledge Palace', desc: 'Answer 1000 questions correctly', check: function() { return store.totalCorrect >= 1000; } },
+  { id: 'correct_2500', icon: '🌌', name: 'Galaxy Brain', desc: 'Answer 2500 questions correctly', check: function() { return store.totalCorrect >= 2500; } },
+
+  /* --- Grandmaster tier: max category difficulty (5) --- */
+  { id: 'math_grandmaster', icon: '🧙', name: 'Math Grandmaster', desc: 'Get Math difficulty to Level 5 (max)', check: function() { return (store.categoryStats['Math'] || {}).difficulty >= 5; } },
+  { id: 'science_grandmaster', icon: '🔬', name: 'Science Grandmaster', desc: 'Get Science difficulty to Level 5 (max)', check: function() { return (store.categoryStats['Science'] || {}).difficulty >= 5; } },
+  { id: 'english_grandmaster', icon: '📖', name: 'English Grandmaster', desc: 'Get English difficulty to Level 5 (max)', check: function() { return (store.categoryStats['English'] || {}).difficulty >= 5; } },
+  { id: 'chinese_grandmaster', icon: '🈴', name: '华文大师 Chinese Grandmaster', desc: 'Get Chinese difficulty to Level 5 (max)', check: function() { return (store.categoryStats['Chinese'] || {}).difficulty >= 5; } },
+  { id: 'brainteaser_grandmaster', icon: '🎓', name: 'Puzzle Grandmaster', desc: 'Get Brain Teaser difficulty to Level 5 (max)', check: function() { return (store.categoryStats['Brain Teaser'] || {}).difficulty >= 5; } },
+
+  /* --- Accuracy & breadth --- */
+  { id: 'sharp_shooter', icon: '🎯', name: 'Sharp Shooter', desc: 'Reach 90% overall accuracy (100+ questions answered)', check: function() { return store.totalAnswered >= 100 && (store.totalCorrect / store.totalAnswered) >= 0.9; } },
+  { id: 'precision_master', icon: '🏹', name: 'Precision Master', desc: 'Reach 95% overall accuracy (200+ questions answered)', check: function() { return store.totalAnswered >= 200 && (store.totalCorrect / store.totalAnswered) >= 0.95; } },
+  { id: 'well_rounded', icon: '🌐', name: 'Well-Rounded Learner', desc: 'Try at least 5 different subjects', check: function() { return Object.keys(store.categoryStats).filter(function(c) { return store.categoryStats[c].total > 0; }).length >= 5; } },
+
+  /* --- Skill mastery (85%+ accuracy, 10+ attempts) --- */
+  { id: 'fraction_fanatic', icon: '🍰', name: 'Fraction Fanatic', desc: 'Get 85%+ accuracy on Fractions (10+ tries)', check: function() { return skillMastered('Math::Fractions'); } },
+  { id: 'times_table_titan', icon: '✖️', name: 'Times Table Titan', desc: 'Get 85%+ accuracy on Multiplication (10+ tries)', check: function() { return skillMastered('Math::Multiplication'); } },
+  { id: 'shape_shifter', icon: '📐', name: 'Shape Shifter', desc: 'Get 85%+ accuracy on Area & Perimeter (10+ tries)', check: function() { return skillMastered('Math::Area & Perimeter'); } },
+  { id: 'magnet_master', icon: '🧲', name: 'Magnet Master', desc: 'Get 85%+ accuracy on Magnets (10+ tries)', check: function() { return skillMastered('Science::Magnets'); } },
+  { id: 'reading_champion', icon: '📗', name: 'Reading Champion', desc: 'Get 85%+ accuracy on Comprehension (10+ tries)', check: function() { return skillMastered('English::Comprehension'); } },
+  { id: 'idiom_expert', icon: '🀄', name: '成语高手 Idiom Expert', desc: 'Get 85%+ accuracy on Idioms (10+ tries)', check: function() { return skillMastered('Chinese::Idioms (成语)'); } },
+
+  /* --- Feature usage --- */
+  { id: 'exam_explorer', icon: '📝', name: 'Exam Explorer', desc: 'Complete a session with real exam questions', check: function() { return store.sessions.some(function(s) { return s.examQuestions > 0; }); } },
+  { id: 'triple_threat', icon: '🎲', name: 'Triple Threat', desc: 'Complete a session with AI, Exam, and Local questions all included', check: function() { return store.sessions.some(function(s) { return s.aiQuestions > 0 && s.examQuestions > 0 && s.localQuestions > 0; }); } },
+  { id: 'ai_regular', icon: '🤝', name: 'AI Regular', desc: 'Complete 10 sessions with AI questions', check: function() { return store.sessions.filter(function(s) { return s.aiQuestions > 0; }).length >= 10; } },
+  { id: 'history_buff', icon: '🏫', name: 'History Buff', desc: 'Answer 50 real exam questions in total', check: function() { return store.sessions.reduce(function(sum, s) { return sum + (s.examQuestions || 0); }, 0) >= 50; } },
+  { id: 'picture_perfect', icon: '🖼️', name: 'Picture Perfect', desc: 'Correctly answer 15 picture/diagram questions', check: function() { return (store.totalPictureQuestions || 0) >= 15; } },
+  { id: 'curious_learner', icon: '💡', name: 'Curious Learner', desc: 'Use a hint 20 times', check: function() { return (store.totalHintsUsed || 0) >= 20; } },
+
+  /* --- Consistency streaks (distinct calendar days played) --- */
+  { id: 'streak_3days', icon: '🔥', name: 'Getting Started', desc: 'Play on 3 different days', check: function() { return new Set(store.sessions.map(function(s) { return s.date; })).size >= 3; } },
+  { id: 'streak_7days', icon: '🔥', name: 'Weekly Warrior', desc: 'Play on 7 different days', check: function() { return new Set(store.sessions.map(function(s) { return s.date; })).size >= 7; } },
+  { id: 'streak_30days', icon: '🔥', name: 'Monthly Marvel', desc: 'Play on 30 different days', check: function() { return new Set(store.sessions.map(function(s) { return s.date; })).size >= 30; } },
+
+  /* --- Pet milestones (ties into the 5-stage pet system) --- */
+  { id: 'hatchling_hero', icon: '🥚', name: 'Hatchling Hero', desc: 'Your pet reaches Level 21', check: function() { return getPetLevel() >= PET_STAGES[0].max + 1; } },
+  { id: 'fledgling_friend', icon: '🐣', name: 'Fledgling Friend', desc: 'Your pet reaches Level 41', check: function() { return getPetLevel() >= PET_STAGES[1].max + 1; } },
+  { id: 'young_dragon_tamer', icon: '🐲', name: 'Young Dragon Tamer', desc: 'Your pet reaches Level 61', check: function() { return getPetLevel() >= PET_STAGES[2].max + 1; } },
+  { id: 'mystery_unlocked', icon: '✨', name: 'Mystery Unlocked', desc: 'Your pet evolves at Level 81', check: function() { return petIsEvolved(); } },
+  { id: 'max_level_legend', icon: '🏆', name: 'Max Level Legend', desc: 'Your pet reaches Level 100', check: function() { return getPetLevel() >= PET_MAX_LEVEL; } },
+  { id: 'generous_owner', icon: '🛍️', name: 'Generous Owner', desc: 'Buy 10 items from the Pet Shop', check: function() { return (store.totalShopPurchases || 0) >= 10; } },
+  { id: 'pet_collector', icon: '🎴', name: 'Pet Collector', desc: 'Discover 3 different Mystery Pets', check: function() { return Object.keys(store.petCollection || {}).length >= 3; } }
 ];
 
 function checkBadges() {
@@ -7064,7 +7141,7 @@ function renderPet() {
   var display = getPetDisplayInfo(info.level);
   var boost = getPetDifficultyBoost(info.level);
   var tier = getPetChallengeTierLabel(info.level);
-  var evolved = info.level >= 41 && !!store.pet.mysteryPetId;
+  var evolved = petIsEvolved();
   var name = store.pet.name || 'Buddy';
 
   /* Idle baseline mood from how well-cared-for the pet currently is -- purely additive,
@@ -7074,7 +7151,7 @@ function renderPet() {
   var idleMood = careAvg < 35 ? 'sad' : 'neutral';
   document.getElementById('pet-emoji').innerHTML = buildPetSVG(info.level, { interactive: true, mood: idleMood });
   document.getElementById('pet-name-input').value = name;
-  /* Cute/Cool only styles the dragon form -- once the Level 41 mystery evolution
+  /* Cute/Cool only styles the dragon form -- once the Level 81 mystery evolution
      locks in a specific creature, the picker no longer applies, so hide it. */
   document.getElementById('pet-style-row').style.display = evolved ? 'none' : '';
   document.getElementById('pet-style-cute').classList.toggle('active', (store.pet.style || 'cute') === 'cute');
@@ -7105,19 +7182,24 @@ function renderPet() {
 
   document.getElementById('pet-explainer').textContent = info.level <= 20
     ? 'Answer questions correctly to earn XP! Levels 1-20 keep things easy while ' + name + ' grows up.'
-    : info.level < 41
-    ? name + ' is growing fast -- and something SPECIAL happens at Level 41...'
-    : 'Questions keep getting more challenging all the way to Level 100. ' + name + ' evolved into a ' + display.name + ' at Level 41!';
+    : !evolved
+    ? name + ' is growing fast -- and something SPECIAL happens at Level ' + MYSTERY_EVOLUTION_LEVEL + '...'
+    : 'Questions keep getting more challenging all the way to Level 100. ' + name + ' evolved into a ' + display.name + ' at Level ' + MYSTERY_EVOLUTION_LEVEL + '!';
 
-  /* Mini stage roadmap: Egg/Hatchling preview the dragon form as usual; the third
-     slot shows a "?" placeholder before Level 41, then the actual revealed pet. */
+  /* Mini stage roadmap: Egg/Hatchling/Fledgling/Young Dragon preview the dragon
+     form as usual; the last (5th) slot shows a "?" placeholder before Level 81,
+     then the actual revealed pet. Column count is set here (not just in CSS) so
+     the grid still shows one row per stage if PET_STAGES is ever rebalanced to a
+     different number of entries. */
+  document.getElementById('pet-stage-roadmap').style.gridTemplateColumns = 'repeat(' + PET_STAGES.length + ', 1fr)';
   document.getElementById('pet-stage-roadmap').innerHTML = PET_STAGES.map(function(s) {
     var idx = PET_STAGES.indexOf(s);
     var stageMin = idx === 0 ? 1 : PET_STAGES[idx - 1].max + 1;
-    var reached = info.level >= stageMin;
     var isMysterySlot = idx === PET_STAGES.length - 1;
-    var art = (isMysterySlot && !store.pet.mysteryPetId) ? buildMysteryPlaceholderSVG() : buildPetSVG(stageMin, { interactive: false });
-    var label = (isMysterySlot && store.pet.mysteryPetId) ? getMysteryPetConfig(store.pet.mysteryPetId).name : s.name;
+    var reached = isMysterySlot ? evolved : info.level >= stageMin;
+    var art = (isMysterySlot && !store.pet.mysteryPetId) ? buildMysteryPlaceholderSVG() : buildPetSVG(stageMin, { interactive: false, forceDragonForm: !isMysterySlot });
+    var revealedCfg = (isMysterySlot && store.pet.mysteryPetId) ? getMysteryPetConfig(store.pet.mysteryPetId) : null;
+    var label = revealedCfg ? revealedCfg.name : s.name;
     return '<div class="pet-stage-chip' + (reached ? ' reached' : '') + (isMysterySlot ? ' mystery' : '') + '">' +
       '<div class="pet-stage-chip-art">' + art + '</div>' +
       '<span>' + label + '</span><br><span class="pet-stage-range">Lv ' + stageMin + '-' + s.max + '</span></div>';
@@ -7161,7 +7243,7 @@ function renderCollection() {
   document.getElementById('collection-grid').innerHTML = MYSTERY_PETS.map(function(p) {
     var id = p[0], name = p[1];
     var owned = collection[id];
-    var art = owned ? buildMysteryPetSVG(id, 60, { interactive: false }) : buildMysteryPlaceholderSVG();
+    var art = owned ? buildMysteryPetSVG(id, 90, { interactive: false }) : buildMysteryPlaceholderSVG();
     var label = owned ? name : '???';
     var sub = owned
       ? 'Found ' + owned.firstObtained + (owned.timesObtained > 1 ? ' (x' + owned.timesObtained + ')' : '')
@@ -7280,8 +7362,8 @@ function toggleReview() {
    ============================================================ */
 applyTheme();
 applySoundIcon();
-/* Retroactive reveal for saves that reached level 41+ before this feature existed. */
-if (store.pet && !store.pet.mysteryPetId && getPetLevelInfo(store.pet.xp || 0).level >= 41) {
+/* Retroactive reveal for saves that reached level 81+ before this feature existed. */
+if (store.pet && !store.pet.mysteryPetId && getPetLevelInfo(store.pet.xp || 0).level >= MYSTERY_EVOLUTION_LEVEL) {
   store.pet.mysteryPetId = pickMysteryPet(store.pet.style || 'cute');
   if (!store.petCollection) store.petCollection = {};
   if (!store.petCollection[store.pet.mysteryPetId]) {

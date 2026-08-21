@@ -1,4 +1,4 @@
-var CACHE_NAME = 'sg-learning-hub-v36';
+var CACHE_NAME = 'sg-learning-hub-v47';
 var URLS_TO_CACHE = [
   './',
   './index.html',
@@ -8,7 +8,8 @@ var URLS_TO_CACHE = [
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './icons/icon-512-maskable.png'
+  './icons/icon-512-maskable.png',
+  './icons/flag-of-singapore-hd.png'
 ];
 
 self.addEventListener('install', function(event) {
