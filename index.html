@@ -2767,6 +2767,11 @@ function generateNumericOptions(correctAns, spread) {
 /* ============================================================
    JS: QUESTION GENERATORS — MATH
    ============================================================ */
+/* Word-problem item counts are frequently 1 (small P1 ranges) -- singular/plural
+   must agree, or "has 1 stickers" reads as broken English to a beginning reader. */
+function pluralize(n, singular) {
+  return n === 1 ? singular : singular + 's';
+}
 function genMathAddSub(level, diff) {
   var maxVal = [20, 50, 200, 1000, 5000, 10000][level - 1] * [0.5, 0.7, 1, 1.2, 1.5][Math.round(diff) - 1];
   var a = rInt(1, Math.floor(maxVal * 0.6));
@@ -2776,7 +2781,7 @@ function genMathAddSub(level, diff) {
     var ans = a + b;
     var opts = generateNumericOptions(ans, Math.max(3, Math.floor(maxVal * 0.1)));
     var p = rNameG();
-    return { text: p.name + ' has ' + a + ' stickers. ' + p.S + ' gets ' + b + ' more. How many stickers does ' + p.s + ' have now?',
+    return { text: p.name + ' has ' + a + ' ' + pluralize(a, 'sticker') + '. ' + p.S + ' gets ' + b + ' more. How many stickers does ' + p.s + ' have now?',
       options: opts.map(String), answer: opts.indexOf(ans), category: 'Math', diffLevel: diff, source: 'local',
       explanation: 'We add ' + a + ' + ' + b + ' = ' + ans + '.\n\nStep 1: Start with ' + a + '\nStep 2: Add ' + b + ' more\nStep 3: ' + a + ' + ' + b + ' = ' + ans };
   } else {
@@ -2785,7 +2790,7 @@ function genMathAddSub(level, diff) {
     var ans2 = big - small;
     var opts2 = generateNumericOptions(ans2, Math.max(2, Math.floor(maxVal * 0.08)));
     var p2 = rNameG();
-    return { text: p2.name + ' has ' + big + ' marbles. ' + p2.S + ' gives away ' + small + '. How many marbles are left?',
+    return { text: p2.name + ' has ' + big + ' ' + pluralize(big, 'marble') + '. ' + p2.S + ' gives away ' + small + '. How many marbles are left?',
       options: opts2.map(String), answer: opts2.indexOf(ans2), category: 'Math', diffLevel: diff, source: 'local',
       explanation: 'We subtract ' + big + ' - ' + small + ' = ' + ans2 + '.\n\nStep 1: Start with ' + big + '\nStep 2: Take away ' + small + '\nStep 3: ' + big + ' - ' + small + ' = ' + ans2 };
   }
@@ -2800,7 +2805,7 @@ function genMathAddSubInput(level, diff) {
   if (isAdd) {
     var ans = a + b;
     var p = rNameG();
-    return { type: 'input', text: p.name + ' has ' + a + ' stickers. ' + p.S + ' gets ' + b + ' more. How many stickers does ' + p.s + ' have now?',
+    return { type: 'input', text: p.name + ' has ' + a + ' ' + pluralize(a, 'sticker') + '. ' + p.S + ' gets ' + b + ' more. How many stickers does ' + p.s + ' have now?',
       acceptedAnswers: [String(ans)], displayAnswer: String(ans), category: 'Math', diffLevel: diff,
       explanation: 'We add ' + a + ' + ' + b + ' = ' + ans + '.\n\nStep 1: Start with ' + a + '\nStep 2: Add ' + b + ' more\nStep 3: ' + a + ' + ' + b + ' = ' + ans };
   } else {
@@ -2808,7 +2813,7 @@ function genMathAddSubInput(level, diff) {
     var small = Math.min(a, b);
     var ans2 = big - small;
     var p2 = rNameG();
-    return { type: 'input', text: p2.name + ' has ' + big + ' marbles. ' + p2.S + ' gives away ' + small + '. How many marbles are left?',
+    return { type: 'input', text: p2.name + ' has ' + big + ' ' + pluralize(big, 'marble') + '. ' + p2.S + ' gives away ' + small + '. How many marbles are left?',
       acceptedAnswers: [String(ans2)], displayAnswer: String(ans2), category: 'Math', diffLevel: diff,
       explanation: 'We subtract ' + big + ' - ' + small + ' = ' + ans2 + '.\n\nStep 1: Start with ' + big + '\nStep 2: Take away ' + small + '\nStep 3: ' + big + ' - ' + small + ' = ' + ans2 };
   }
@@ -2918,12 +2923,18 @@ function genMathTime(level, diff) {
     return hh + ':' + String(m).padStart(2, '0') + ' ' + period;
   };
   var ans = fmtTime(endH, endM);
-  var wrongTimes = [
-    fmtTime(endH, (endM + 15) % 60),
-    fmtTime(endH, Math.abs(endM - 15)),
-    fmtTime((endH + 1) % 24, endM)
-  ];
-  var allOpts = shuffle([ans].concat(wrongTimes));
+  /* De-dupe on the FORMATTED string, not the raw h/m offset -- e.g. when endM is 0,
+     a "+15 min" and a "-15 min" nudge both land on the same :15 mark and would
+     otherwise show two identical-looking answer buttons. */
+  var offsets = [[0, 15], [0, -15], [1, 0], [-1, 0], [0, 30], [0, -30], [1, 15], [-1, -15], [2, 0]];
+  var wrongSet = new Set();
+  for (var oi = 0; oi < offsets.length && wrongSet.size < 3; oi++) {
+    var h2 = (((endH + offsets[oi][0]) % 24) + 24) % 24;
+    var m2 = ((endM + offsets[oi][1]) % 60 + 60) % 60;
+    var candidate = fmtTime(h2, m2);
+    if (candidate !== ans) wrongSet.add(candidate);
+  }
+  var allOpts = shuffle([ans].concat(Array.from(wrongSet)));
   var p = rNameG();
   return { text: p.name + ' starts reading at ' + fmtTime(startH, startM) + '. ' + p.S + ' reads for ' + addMin + ' minutes. What time does ' + p.s + ' finish?',
     options: allOpts, answer: allOpts.indexOf(ans), category: 'Math', diffLevel: diff, source: 'local',
@@ -2937,12 +2948,18 @@ function genMathMoney(level, diff) {
   var change = (paid - parseFloat(priceA) - parseFloat(priceB)).toFixed(2);
   var p = rNameG();
   var ans = '$' + change;
-  var wrongChanges = [
-    '$' + (parseFloat(change) + 0.5).toFixed(2),
-    '$' + Math.abs(parseFloat(change) - 0.5).toFixed(2),
-    '$' + (parseFloat(change) + 1).toFixed(2)
-  ];
-  var allOpts = shuffle([ans].concat(wrongChanges));
+  /* De-dupe on the FORMATTED "$X.XX" string, not the raw offset -- e.g. when change
+     is $0.00, both a "+$0.50" and a "-$0.50" nudge land on the same $0.50 (abs()
+     folds the negative case back onto the positive one), which would otherwise show
+     two identical-looking answer buttons. */
+  var changeOffsets = [0.5, -0.5, 1, -1, 0.25, -0.25, 1.5, 0.75];
+  var wrongSet = new Set();
+  for (var ci = 0; ci < changeOffsets.length && wrongSet.size < 3; ci++) {
+    var candidateVal = Math.abs(parseFloat(change) + changeOffsets[ci]);
+    var candidate = '$' + candidateVal.toFixed(2);
+    if (candidate !== ans) wrongSet.add(candidate);
+  }
+  var allOpts = shuffle([ans].concat(Array.from(wrongSet)));
   return { text: p.name + ' buys a drink for $' + priceA + ' and a snack for $' + priceB + '. ' + p.S + ' pays with $' + paid.toFixed(2) + '. How much change does ' + p.name + ' get?',
     options: allOpts, answer: allOpts.indexOf(ans), category: 'Math', diffLevel: diff, source: 'local',
     explanation: 'Total cost = $' + priceA + ' + $' + priceB + ' = $' + (parseFloat(priceA) + parseFloat(priceB)).toFixed(2) + '\nChange = $' + paid.toFixed(2) + ' - $' + (parseFloat(priceA) + parseFloat(priceB)).toFixed(2) + ' = ' + ans };
