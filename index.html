@@ -189,6 +189,9 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .quiz-header .qnum { font-weight: 700; font-size: 1rem; }
 .quiz-header .qcat { font-size: 0.8rem; color: var(--text2); background: var(--bg); padding: 4px 10px; border-radius: 8px; }
 .quiz-header .qscore { font-weight: 700; color: var(--accent2); }
+.quiz-header .qtimer { font-weight: 700; font-size: 0.85rem; padding: 4px 10px; border-radius: 8px; background: var(--bg); }
+.quiz-header .qtimer.low { color: var(--danger); animation: pulse 1s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 .progress-bar { height: 8px; background: var(--progress-bg); border-radius: 4px; overflow: hidden; margin-bottom: 18px; }
 .progress-bar .fill { height: 100%; background: var(--primary); border-radius: 4px; transition: width 0.4s ease; }
 
@@ -343,6 +346,45 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .pet-shop-card .shop-name { font-size: 0.8rem; font-weight: 700; margin-top: 4px; }
 .pet-shop-card .shop-cost { font-size: 0.75rem; color: var(--text2); margin: 4px 0 8px; }
 .pet-shop-card button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Mini-games: picker grid clones the Shop's card look for visual consistency. */
+.game-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;
+}
+.game-card {
+  background: var(--card); border-radius: 12px; padding: 14px 10px;
+  text-align: center; box-shadow: var(--shadow);
+}
+.game-card .game-emoji { font-size: 2rem; }
+.game-card .game-name { font-size: 0.85rem; font-weight: 700; margin-top: 6px; }
+.game-card .game-diff { font-size: 0.72rem; color: var(--text2); margin: 2px 0; }
+.game-card .game-desc { font-size: 0.72rem; color: var(--text2); min-height: 32px; margin: 4px 0; }
+.game-card .game-cost { font-size: 0.75rem; color: var(--text2); margin: 2px 0 8px; }
+.game-card button:disabled { opacity: 0.4; cursor: not-allowed; }
+.star-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  max-width: 300px; margin: 14px auto 0;
+}
+.star-cell {
+  aspect-ratio: 1; background: var(--bg); border-radius: 12px; display: flex;
+  align-items: center; justify-content: center; font-size: 1.8rem; cursor: pointer;
+  border: 2px solid var(--card-border); transition: transform 0.1s; user-select: none;
+}
+.star-cell:active { transform: scale(0.92); }
+.memory-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  max-width: 340px; margin: 14px auto 0;
+}
+.memory-card {
+  aspect-ratio: 1; background: var(--primary); border-radius: 10px; display: flex;
+  align-items: center; justify-content: center; font-size: 1.5rem; cursor: pointer;
+  color: transparent; transition: transform 0.15s; user-select: none;
+}
+.memory-card.flipped, .memory-card.matched { background: var(--card); color: inherit; border: 2px solid var(--card-border); }
+.memory-card.matched { opacity: 0.55; cursor: default; }
+.game-result-panel { text-align: center; padding: 16px 10px; }
+.game-result-panel .result-emoji { font-size: 2.5rem; }
+.game-result-panel .result-happiness { font-size: 1.2rem; font-weight: 700; color: var(--accent2); margin: 10px 0; }
 
 .growth-list { list-style: none; }
 .growth-item {
@@ -816,11 +858,14 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   </div>
   <div class="dash-section">
     <h3>🛒 Pet Shop</h3>
-    <p style="font-size:0.85rem;color:var(--text2);margin-top:-6px;margin-bottom:12px">Spend points on food or toys to fill Hunger and Happiness.</p>
+    <p style="font-size:0.85rem;color:var(--text2);margin-top:-6px;margin-bottom:12px">Spend points on food to fill Hunger. Happiness only comes from playing a Mini-Game!</p>
     <div class="pet-shop-grid" id="pet-shop-grid"></div>
   </div>
   <div class="dash-section" style="text-align:center">
     <button class="btn-secondary" onclick="showScreen('collection')">🏆 View My Pet Collection</button>
+  </div>
+  <div class="dash-section" style="text-align:center">
+    <button class="btn-secondary" onclick="showScreen('games')">🎮 Play a Mini-Game</button>
   </div>
 </div>
 
@@ -840,6 +885,21 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </div>
 
 <!-- ============================================================
+     HTML: MINI-GAMES SCREEN
+     ============================================================ -->
+<div class="screen" id="screen-games">
+  <div class="dash-section" id="games-picker-wrap">
+    <h3>🎮 Play a Mini-Game</h3>
+    <p style="font-size:0.9rem;color:var(--text2);margin-bottom:14px">Spend points to play -- better performance means more Happiness for your pet!</p>
+    <div class="game-grid" id="game-grid"></div>
+  </div>
+  <div class="dash-section" id="game-active-wrap" style="display:none"></div>
+  <div class="dash-section" style="text-align:center">
+    <button class="btn-secondary" onclick="cancelActiveGame(); showScreen('pet')">← Back to Pet</button>
+  </div>
+</div>
+
+<!-- ============================================================
      HTML: QUIZ SCREEN
      ============================================================ -->
 <div class="screen" id="screen-quiz">
@@ -847,6 +907,7 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     <span class="qnum" id="q-num">Q 1 / 30</span>
     <span class="qcat" id="q-cat">Math</span>
     <span id="q-source"></span>
+    <span class="qtimer" id="q-timer" style="display:none"></span>
     <span class="qscore" id="q-score">Score: 0</span>
   </div>
   <div class="quiz-pet-widget" id="quiz-pet-widget">
@@ -1001,6 +1062,41 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     <div class="setting-hint">How many AI-generated questions come with a real AI-generated picture to look at (a graph, shapes, a scene to count/compare). Google Gemini only -- Claude cannot generate images, so this has no effect on the Anthropic provider. Note: AI-generated pictures need billing enabled on your Google account -- they are NOT included in Gemini's free tier, even though free text questions work fine. Without billing enabled, this setting has no visible effect (questions quietly stay text/diagram-only). Many Math questions already include original diagrams (bar graphs, clocks, shapes) that work for free, with no AI or billing needed.</div>
   </div>
 
+  <div class="settings-panel">
+    <h3>⏱️ Quiz Timer</h3>
+    <p style="font-size:0.88rem;color:var(--text2);margin-bottom:14px">Optionally add a countdown to each question for timed practice. Off by default -- the quiz stays untimed unless you turn this on.</p>
+    <div class="setting-row">
+      <label>Enable Timer</label>
+      <label class="toggle-switch">
+        <input type="checkbox" id="quiz-timer-toggle" onchange="toggleQuizTimer()">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="setting-row" id="quiz-timer-seconds-row" style="display:none">
+      <label>Seconds per Question</label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="range" id="quiz-timer-seconds" min="10" max="60" step="5" value="30" style="flex:1" onchange="saveQuizTimerSeconds()">
+        <span id="quiz-timer-seconds-label" style="font-size:0.85rem;font-weight:700;min-width:40px">30s</span>
+      </div>
+    </div>
+    <div class="setting-hint" id="quiz-timer-hint" style="display:none">If time runs out, the question is marked as answered (incorrect) and the next one loads -- same as any other wrong answer.</div>
+  </div>
+
+  <div class="settings-panel">
+    <h3>💾 Save &amp; Backup</h3>
+    <p style="font-size:0.88rem;color:var(--text2);margin-bottom:14px">Progress saves automatically on this device only. Download a backup file so it isn't lost if you clear your browser, switch devices, or reinstall -- then restore it anytime from here.</p>
+    <div class="setting-row">
+      <label></label>
+      <button class="submit-btn" style="padding:10px 20px;font-size:0.85rem;min-width:auto" onclick="downloadBackup()">⬇️ Download Backup</button>
+    </div>
+    <div class="setting-row">
+      <label></label>
+      <button class="btn-secondary" style="padding:10px 20px;font-size:0.85rem" onclick="document.getElementById('restore-file-input').click()">⬆️ Restore from Backup</button>
+      <input type="file" id="restore-file-input" accept="application/json,.json" style="display:none" onchange="restoreBackup(event)">
+    </div>
+    <div class="setting-hint">Restoring a backup REPLACES all current progress on this device with the backup's contents -- this cannot be undone.</div>
+  </div>
+
   <div class="settings-panel" id="gemini-guide">
     <h3>How to Get a Free Gemini API Key (5 minutes)</h3>
     <div style="font-size:0.88rem;line-height:1.85;color:var(--text2)">
@@ -1077,40 +1173,53 @@ function _storageAvailable() {
 }
 var _useLocalStorage = _storageAvailable();
 
+/* Backfills every field added to the store schema after its original shape, so a
+   save from an older app version (or a restored backup file, see restoreBackup())
+   always ends up with a complete, current-shape store. Shared by loadStore() below
+   and restoreBackup() -- keeping this in one place means the two can never drift
+   out of sync on what "a valid store" contains. */
+function migrateStoreFields(d) {
+  d.skillStats = d.skillStats || {};
+  d.pet = d.pet || { xp: 0, name: 'Buddy' };
+  d.pet.style = d.pet.style || 'cute';
+  /* Pet care system (hunger/happiness/points/decay) added after xp-only leveling --
+     backfill only the new fields on existing saves, since d.pet already exists. */
+  d.pet.hunger = (typeof d.pet.hunger === 'number') ? d.pet.hunger : 70;
+  d.pet.happiness = (typeof d.pet.happiness === 'number') ? d.pet.happiness : 70;
+  d.pet.points = (typeof d.pet.points === 'number') ? d.pet.points : 0;
+  d.pet.lastUpdated = d.pet.lastUpdated || Date.now();
+  d.petCollection = d.petCollection || {};
+  /* Existing saves that already have session history or pet progress skip the
+     new onboarding picker entirely -- it's only for genuinely fresh installs. */
+  d.onboardingDone = d.onboardingDone === true || d.pet.xp > 0 || (d.sessions && d.sessions.length > 0);
+  /* NOTE: retroactive mystery-pet migration for existing level-81+ saves happens
+     at app init (bottom of script), not here -- MYSTERY_PETS/pickMysteryPet
+     aren't assigned yet this early in the script's top-to-bottom execution,
+     since loadStore() itself runs before that later `var` statement runs. */
+  /* Google/Anthropic retire model IDs over time (e.g. Gemini 1.5 and 2.0 were both
+     shut down by mid-2026); a previously-saved dead model ID would otherwise silently
+     keep failing forever since it overrides the code's own fallback default. */
+  var DEAD_MODELS = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-2.5-flash-preview-05-20', 'claude-sonnet-4-6'];
+  if (DEAD_MODELS.indexOf(d.aiModel) >= 0) d.aiModel = '';
+  /* Real Exam source added after aiRatio existed -- backfill for existing saves. */
+  d.examRatio = (typeof d.examRatio === 'number') ? d.examRatio : 0;
+  /* AI picture questions added after examRatio existed -- backfill for existing saves. */
+  d.pictureRatio = (typeof d.pictureRatio === 'number') ? d.pictureRatio : 25;
+  /* Optional per-question quiz timer, added after picture questions -- off by
+     default so existing saves keep the untimed experience they're used to. */
+  d.quizTimerEnabled = d.quizTimerEnabled === true;
+  d.quizTimerSeconds = (typeof d.quizTimerSeconds === 'number') ? d.quizTimerSeconds : 30;
+  /* Mini-games added after the pet-care shop existed -- backfill for existing saves. */
+  d.miniGameStats = d.miniGameStats || {};
+  return d;
+}
+
 function loadStore() {
   try {
     var raw = _useLocalStorage ? localStorage.getItem(STORE_KEY) : null;
     if (_memoryStore && !raw) return _memoryStore;
     var d = JSON.parse(raw);
-    if (d && typeof d === 'object') {
-      d.skillStats = d.skillStats || {};
-      d.pet = d.pet || { xp: 0, name: 'Buddy' };
-      d.pet.style = d.pet.style || 'cute';
-      /* Pet care system (hunger/happiness/points/decay) added after xp-only leveling --
-         backfill only the new fields on existing saves, since d.pet already exists. */
-      d.pet.hunger = (typeof d.pet.hunger === 'number') ? d.pet.hunger : 70;
-      d.pet.happiness = (typeof d.pet.happiness === 'number') ? d.pet.happiness : 70;
-      d.pet.points = (typeof d.pet.points === 'number') ? d.pet.points : 0;
-      d.pet.lastUpdated = d.pet.lastUpdated || Date.now();
-      d.petCollection = d.petCollection || {};
-      /* Existing saves that already have session history or pet progress skip the
-         new onboarding picker entirely -- it's only for genuinely fresh installs. */
-      d.onboardingDone = d.onboardingDone === true || d.pet.xp > 0 || (d.sessions && d.sessions.length > 0);
-      /* NOTE: retroactive mystery-pet migration for existing level-81+ saves happens
-         at app init (bottom of script), not here -- MYSTERY_PETS/pickMysteryPet
-         aren't assigned yet this early in the script's top-to-bottom execution,
-         since loadStore() itself runs before that later `var` statement runs. */
-      /* Google/Anthropic retire model IDs over time (e.g. Gemini 1.5 and 2.0 were both
-         shut down by mid-2026); a previously-saved dead model ID would otherwise silently
-         keep failing forever since it overrides the code's own fallback default. */
-      var DEAD_MODELS = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-2.5-flash-preview-05-20', 'claude-sonnet-4-6'];
-      if (DEAD_MODELS.indexOf(d.aiModel) >= 0) d.aiModel = '';
-      /* Real Exam source added after aiRatio existed -- backfill for existing saves. */
-      d.examRatio = (typeof d.examRatio === 'number') ? d.examRatio : 0;
-      /* AI picture questions added after examRatio existed -- backfill for existing saves. */
-      d.pictureRatio = (typeof d.pictureRatio === 'number') ? d.pictureRatio : 25;
-      return d;
-    }
+    if (d && typeof d === 'object') return migrateStoreFields(d);
   } catch(e) {}
   return getDefaultStore();
 }
@@ -1136,6 +1245,9 @@ function getDefaultStore() {
     aiRatio: 50,
     examRatio: 0,
     pictureRatio: 25,
+    quizTimerEnabled: false,
+    quizTimerSeconds: 30,
+    miniGameStats: {},
     soundEnabled: true,
     aiCache: []
   };
@@ -1420,6 +1532,12 @@ function toggleTheme() {
    JS: SCREEN MANAGEMENT
    ============================================================ */
 function showScreen(name) {
+  /* Leaving the quiz/games screens mid-action shouldn't leave a stray timer/interval
+     ticking against a screen the student can no longer see -- both screens keep
+     their DOM alive (just hidden via .active) rather than being torn down, so a
+     pending setTimeout/setInterval would otherwise keep firing in the background. */
+  if (name !== 'quiz') clearQuizTimer();
+  if (name !== 'games') cancelActiveGame();
   document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
   document.getElementById('screen-' + name).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
@@ -1431,6 +1549,10 @@ function showScreen(name) {
   if (name === 'collection') {
     document.getElementById('nav-pet').classList.add('active'); /* Collection lives under the Pet tab conceptually */
     renderCollection();
+  }
+  if (name === 'games') {
+    document.getElementById('nav-pet').classList.add('active'); /* Mini-games live under the Pet tab conceptually */
+    renderGamePicker();
   }
   if (name === 'dashboard') {
     document.getElementById('nav-dash').classList.add('active');
@@ -1466,6 +1588,28 @@ function renderSettings() {
   document.getElementById('picture-ratio').value = (typeof store.pictureRatio === 'number') ? store.pictureRatio : 25;
   document.getElementById('picture-ratio-label').textContent = ((typeof store.pictureRatio === 'number') ? store.pictureRatio : 25) + '% Picture';
   updateAISettingsVisibility();
+  document.getElementById('quiz-timer-toggle').checked = !!store.quizTimerEnabled;
+  document.getElementById('quiz-timer-seconds').value = store.quizTimerSeconds || 30;
+  document.getElementById('quiz-timer-seconds-label').textContent = (store.quizTimerSeconds || 30) + 's';
+  updateQuizTimerSettingsVisibility();
+}
+
+function updateQuizTimerSettingsVisibility() {
+  var show = !!store.quizTimerEnabled;
+  document.getElementById('quiz-timer-seconds-row').style.display = show ? '' : 'none';
+  document.getElementById('quiz-timer-hint').style.display = show ? '' : 'none';
+}
+
+function toggleQuizTimer() {
+  store.quizTimerEnabled = document.getElementById('quiz-timer-toggle').checked;
+  saveStore(store);
+  updateQuizTimerSettingsVisibility();
+}
+
+function saveQuizTimerSeconds() {
+  store.quizTimerSeconds = parseInt(document.getElementById('quiz-timer-seconds').value, 10) || 30;
+  document.getElementById('quiz-timer-seconds-label').textContent = store.quizTimerSeconds + 's';
+  saveStore(store);
 }
 
 function updateModelDropdown(provider, selectedModel) {
@@ -2004,15 +2148,29 @@ var PET_CARE_PER_RETRY_CORRECT = 2;
 var PET_DECAY_PER_HOUR = 1;
 var PET_DECAY_FLOOR = 15;
 var PET_MAX_LEVEL = 100;
-/* Shop: spend points to fill hunger (food) or happiness (toys). Flat cost == fill
-   amount, so the numbers are easy for a P1-P6 student to reason about. */
+/* Shop: spend points to fill hunger with food. Flat cost == fill amount, so the
+   numbers are easy for a P1-P6 student to reason about. Happiness is deliberately
+   NOT purchasable here -- this is the Tamagotchi-style rule of the app: food can be
+   bought, but Happiness only ever comes from actually PLAYING with your pet (the
+   mini-games below), never from a flat transaction. Toy items existed here before
+   mini-games were built and were removed once an actual "play" activity existed to
+   take their place -- keeping both would let a student skip playing entirely and
+   still max out Happiness by clicking "Buy", undermining the whole point. */
 var PET_SHOP_ITEMS = [
   { id: 'snack',  name: 'Snack',       emoji: '🍎', type: 'food', cost: 15, hungerFill: 15 },
   { id: 'meal',   name: 'Hearty Meal', emoji: '🍲', type: 'food', cost: 40, hungerFill: 40 },
-  { id: 'feast',  name: 'Big Feast',   emoji: '🍱', type: 'food', cost: 80, hungerFill: 80 },
-  { id: 'ball',   name: 'Bouncy Ball', emoji: '🏀', type: 'toy',  cost: 15, happinessFill: 15 },
-  { id: 'puzzle', name: 'Puzzle Toy',  emoji: '🧩', type: 'toy',  cost: 40, happinessFill: 40 },
-  { id: 'party',  name: 'Party Time',  emoji: '🎉', type: 'toy',  cost: 80, happinessFill: 80 }
+  { id: 'feast',  name: 'Big Feast',   emoji: '🍱', type: 'food', cost: 80, hungerFill: 80 }
+];
+/* Mini-games: the ONLY way to spend points on Happiness -- the
+   student actually plays something, and Happiness scales with performance instead
+   of being a fixed fill amount. Cost is pegged to the Shop's 15/40/80 tiers so the
+   points economy doesn't need rebalancing. Reward ranges (documented per game at
+   each game's finish function) always include a guaranteed minimum, so a bad run
+   is never punishing for a young student. */
+var MINI_GAMES = [
+  { id: 'catchStar',   name: 'Catch the Star',   emoji: '⭐', difficultyLabel: 'Easy',   cost: 15, description: 'Tap the star before it moves! 8 rounds.' },
+  { id: 'memoryMatch', name: 'Memory Match',     emoji: '🧠', difficultyLabel: 'Medium', cost: 35, description: 'Flip cards to find all 6 matching pairs.' },
+  { id: 'quickFacts',  name: 'Quick Facts Dash', emoji: '⚡', difficultyLabel: 'Hard',   cost: 55, description: 'Answer as many quiz questions as you can in 30 seconds!' }
 ];
 /* 5 conceptual stages: Egg/Hatchling/Fledgling/Young Dragon grow as the dragon form
    (levels 1-80) -- petStageIndexAndGrowth derives its art-stage boundaries from this
@@ -2656,6 +2814,310 @@ function buyPetItem(itemId) {
   else if (award.level) queueCelebration('petLevelUp', award.level);
   renderPet();
   renderHomePetChip();
+}
+
+/* ============================================================
+   JS: MINI-GAMES
+   Transient (non-persisted) game state -- only store.miniGameStats and the points/
+   happiness spend/award are ever saved. Every game ends by calling
+   awardMiniGameHappiness(), which routes through the exact same bumpPetCare() pipe
+   buyPetItem() uses above, so leveling/mystery-evolution/decay all keep working
+   unmodified. Games only ever raise happiness, never hunger.
+   ============================================================ */
+var activeGame = null;
+
+function renderGamePicker() {
+  document.getElementById('game-active-wrap').style.display = 'none';
+  document.getElementById('games-picker-wrap').style.display = '';
+  document.getElementById('game-grid').innerHTML = MINI_GAMES.map(function(g) {
+    var canAfford = (store.pet && store.pet.points || 0) >= g.cost;
+    return '<div class="game-card">' +
+      '<div class="game-emoji">' + g.emoji + '</div>' +
+      '<div class="game-name">' + g.name + '</div>' +
+      '<div class="game-diff">' + g.difficultyLabel + '</div>' +
+      '<p class="game-desc">' + g.description + '</p>' +
+      '<div class="game-cost">🪙 ' + g.cost + '</div>' +
+      '<button class="btn-secondary" style="padding:10px 14px;font-size:0.85rem;min-height:40px" onclick="startMiniGame(\'' + g.id + '\')"' + (canAfford ? '' : ' disabled') + '>Play</button>' +
+      '</div>';
+  }).join('');
+}
+
+/* Cancels any in-progress game's pending timers -- called whenever the student
+   navigates away from screen-games (showScreen), since screens stay in the DOM
+   when hidden rather than being torn down, so a dangling setTimeout/setInterval
+   would otherwise keep firing (and could even award happiness) after they've left. */
+function cancelActiveGame() {
+  if (!activeGame) return;
+  if (activeGame.timeoutId) clearTimeout(activeGame.timeoutId);
+  if (activeGame.intervalId) clearInterval(activeGame.intervalId);
+  activeGame = null;
+}
+
+function startMiniGame(id) {
+  var game = MINI_GAMES.filter(function(g) { return g.id === id; })[0];
+  if (!game || !store.pet || (store.pet.points || 0) < game.cost) return;
+  store.pet.points -= game.cost;
+  saveStore(store);
+  renderHomePetChip();
+  if (id === 'catchStar') startCatchStar();
+  else if (id === 'memoryMatch') startMemoryMatch();
+  else if (id === 'quickFacts') startQuickFacts();
+}
+
+/* Shared tail of every mini-game: awards happiness, updates the total-plays counter
+   used by badges, checks for newly-unlocked badges, and shows the inline result
+   panel. Deliberately NOT a modal celebration like level-up/mystery-evolution --
+   those are rare milestones, but finishing a mini-game is a frequent action, so it
+   gets a lightweight inline "Play Again / Back" panel instead. */
+function awardMiniGameHappiness(gameId, happinessAward, resultLine) {
+  if (!store.miniGameStats[gameId]) store.miniGameStats[gameId] = {};
+  store.miniGameStats[gameId].timesPlayed = (store.miniGameStats[gameId].timesPlayed || 0) + 1;
+  store.totalMiniGamesPlayed = (store.totalMiniGamesPlayed || 0) + 1;
+  var award = bumpPetCare(0, happinessAward);
+  saveStore(store);
+  if (award.mysteryPetId) queueCelebration('mysteryEvolution', award.mysteryPetId);
+  else if (award.level) queueCelebration('petLevelUp', award.level);
+  checkBadges();
+  renderMiniGameResult(gameId, happinessAward, resultLine);
+  renderHomePetChip();
+}
+
+function renderMiniGameResult(gameId, happinessAward, resultLine) {
+  var game = MINI_GAMES.filter(function(g) { return g.id === gameId; })[0];
+  document.getElementById('game-active-wrap').innerHTML =
+    '<div class="game-result-panel">' +
+      '<div class="result-emoji">' + (game ? game.emoji : '🎮') + '</div>' +
+      '<p style="font-weight:700;margin-top:6px">' + (resultLine || 'Game over!') + '</p>' +
+      '<p class="result-happiness">💖 +' + happinessAward + ' Happiness!</p>' +
+      '<button class="btn-secondary" style="margin:6px" onclick="startMiniGame(\'' + gameId + '\')">Play Again</button>' +
+      '<button class="btn-secondary" style="margin:6px" onclick="renderGamePicker()">Back to Games</button>' +
+    '</div>';
+}
+
+/* --- Game 1: Catch the Star (Easy) --------------------------------------
+   A star appears in a random cell of a 3x3 grid for 8 rounds; tap it before it
+   moves. Reward: 10 happiness guaranteed + 1 per hit (max 8) = 10-18 range.
+   Round duration shrinks gradually as the pet's overall level rises (a young/new
+   student gets a forgiving ~1.3s per round; a high-level student gets a snappier
+   ~0.8s floor) -- difficulty grows WITH progress rather than being uniformly hard
+   from day one. */
+function catchStarRoundDuration() {
+  return Math.max(700, 1300 - getPetLevel() * 5);
+}
+function startCatchStar() {
+  activeGame = { id: 'catchStar', round: 0, hits: 0, totalRounds: 8, activeCell: -1, tapped: false, timeoutId: null };
+  document.getElementById('games-picker-wrap').style.display = 'none';
+  document.getElementById('game-active-wrap').style.display = '';
+  document.getElementById('game-active-wrap').innerHTML =
+    '<div class="dash-section"><h3>⭐ Catch the Star</h3>' +
+    '<p style="font-size:0.85rem;color:var(--text2)" id="catchstar-status"></p>' +
+    '<div class="star-grid" id="star-grid"></div></div>';
+  nextCatchStarRound();
+}
+
+function renderStarGrid() {
+  var grid = document.getElementById('star-grid');
+  if (!grid || !activeGame) return;
+  var html = '';
+  for (var i = 0; i < 9; i++) {
+    html += '<div class="star-cell" onclick="catchStarTap(' + i + ')">' + (i === activeGame.activeCell ? '⭐' : '') + '</div>';
+  }
+  grid.innerHTML = html;
+}
+
+function nextCatchStarRound() {
+  var g = activeGame;
+  if (!g || g.id !== 'catchStar') return;
+  if (g.round >= g.totalRounds) { endCatchStar(); return; }
+  g.round++;
+  g.activeCell = rInt(0, 8);
+  g.tapped = false;
+  var statusEl = document.getElementById('catchstar-status');
+  if (statusEl) statusEl.textContent = 'Round ' + g.round + ' / ' + g.totalRounds + ' · Hits: ' + g.hits;
+  renderStarGrid();
+  g.timeoutId = setTimeout(function() { nextCatchStarRound(); }, catchStarRoundDuration());
+}
+
+function catchStarTap(idx) {
+  var g = activeGame;
+  if (!g || g.id !== 'catchStar' || g.tapped) return;
+  g.tapped = true;
+  if (idx === g.activeCell) { g.hits++; playCorrectSound(); }
+  if (g.timeoutId) clearTimeout(g.timeoutId);
+  g.timeoutId = setTimeout(function() { nextCatchStarRound(); }, 250);
+}
+
+function endCatchStar() {
+  var g = activeGame;
+  activeGame = null;
+  if (!store.miniGameStats.catchStar) store.miniGameStats.catchStar = {};
+  store.miniGameStats.catchStar.bestHits = Math.max(store.miniGameStats.catchStar.bestHits || 0, g.hits);
+  var award = 10 + g.hits;
+  awardMiniGameHappiness('catchStar', award, g.hits + ' / ' + g.totalRounds + ' stars caught!');
+}
+
+/* --- Game 2: Memory Match (Medium) ---------------------------------------
+   Classic flip-two-cards match game. Reward: 15 happiness guaranteed + a bonus
+   that shrinks as attempts grow past the theoretical minimum (pairCount) = 15-40
+   range. Board size scales with the pet's overall level -- a young/new student
+   (Egg/Hatchling, level <=40) gets a gentler 4-pair board, growing to the full
+   6 pairs once the pet has reached the Mystery Pet stage (81+) -- so difficulty
+   grows WITH progress rather than being uniformly hard from day one. */
+var MEMORY_EMOJIS = ['🐶', '🐱', '🐰', '🐻', '🦁', '🐸'];
+
+function memoryMatchPairCount() {
+  var lvl = getPetLevel();
+  if (lvl <= PET_STAGES[1].max) return 4;
+  if (lvl <= PET_STAGES[3].max) return 5;
+  return MEMORY_EMOJIS.length;
+}
+
+function startMemoryMatch() {
+  var pairCount = memoryMatchPairCount();
+  var emojiSet = MEMORY_EMOJIS.slice(0, pairCount);
+  var deck = shuffle(emojiSet.concat(emojiSet));
+  activeGame = { id: 'memoryMatch', cards: deck, pairCount: pairCount, flipped: [], matched: [], attempts: 0, locked: false, timeoutId: null };
+  document.getElementById('games-picker-wrap').style.display = 'none';
+  document.getElementById('game-active-wrap').style.display = '';
+  var cols = pairCount <= 5 ? pairCount : 4;
+  document.getElementById('game-active-wrap').innerHTML =
+    '<div class="dash-section"><h3>🧠 Memory Match</h3>' +
+    '<p style="font-size:0.85rem;color:var(--text2)" id="memory-status">Find all ' + pairCount + ' pairs! Attempts: 0</p>' +
+    '<div class="memory-grid" id="memory-grid" style="grid-template-columns:repeat(' + cols + ',1fr)"></div></div>';
+  renderMemoryGrid();
+}
+
+function renderMemoryGrid() {
+  var grid = document.getElementById('memory-grid');
+  var g = activeGame;
+  if (!grid || !g) return;
+  grid.innerHTML = g.cards.map(function(emoji, i) {
+    var isFlipped = g.flipped.indexOf(i) !== -1;
+    var isMatched = g.matched.indexOf(i) !== -1;
+    var cls = 'memory-card' + (isFlipped || isMatched ? ' flipped' : '') + (isMatched ? ' matched' : '');
+    return '<div class="' + cls + '" onclick="memoryCardTap(' + i + ')">' + ((isFlipped || isMatched) ? emoji : '❓') + '</div>';
+  }).join('');
+}
+
+function memoryCardTap(i) {
+  var g = activeGame;
+  if (!g || g.id !== 'memoryMatch' || g.locked) return;
+  if (g.flipped.indexOf(i) !== -1 || g.matched.indexOf(i) !== -1) return;
+  g.flipped.push(i);
+  renderMemoryGrid();
+  if (g.flipped.length < 2) return;
+  g.attempts++;
+  var statusEl = document.getElementById('memory-status');
+  if (statusEl) statusEl.textContent = 'Find all ' + g.pairCount + ' pairs! Attempts: ' + g.attempts;
+  var a = g.flipped[0], b = g.flipped[1];
+  if (g.cards[a] === g.cards[b]) {
+    g.matched.push(a, b);
+    g.flipped = [];
+    playCorrectSound();
+    renderMemoryGrid();
+    if (g.matched.length === g.cards.length) {
+      g.timeoutId = setTimeout(function() { endMemoryMatch(); }, 500);
+    }
+  } else {
+    g.locked = true;
+    playWrongSound();
+    g.timeoutId = setTimeout(function() {
+      g.flipped = [];
+      g.locked = false;
+      renderMemoryGrid();
+    }, 900);
+  }
+}
+
+function endMemoryMatch() {
+  var g = activeGame;
+  activeGame = null;
+  var ms = store.miniGameStats.memoryMatch || {};
+  if (typeof ms.bestAttempts !== 'number' || g.attempts < ms.bestAttempts) ms.bestAttempts = g.attempts;
+  /* Tracked separately from bestAttempts (a raw number) because the board's pairCount
+     itself varies by pet level -- "bestAttempts === 6" would stop meaning "perfect"
+     once a student progresses onto a bigger board, and would never have meant
+     "perfect" in the first place for a student still on the smaller 4/5-pair board.
+     A flag survives that rebalance regardless of which board size it was earned on. */
+  if (g.attempts === g.pairCount) ms.everPerfectClear = true;
+  store.miniGameStats.memoryMatch = ms;
+  var bonus = Math.max(0, Math.min(25, 25 - (g.attempts - g.pairCount) * 2));
+  var award = 15 + bonus;
+  awardMiniGameHappiness('memoryMatch', award, 'Cleared in ' + g.attempts + ' attempts!');
+}
+
+/* --- Game 3: Quick Facts Dash (Hard, lightly academic) -------------------
+   A 30-second sprint reusing the EXISTING generateQuestionLocal() question
+   generators (filtered to MCQ for snappy pacing) rather than any new content bank
+   -- distinct from the main quiz by skipping explanations and advancing instantly.
+   Reward: 15 happiness guaranteed + 2 per correct answer = 15-45+ range. */
+var QUICK_FACTS_CATEGORIES = ['Math', 'Science', 'English', 'Chinese'];
+
+function startQuickFacts() {
+  activeGame = { id: 'quickFacts', correct: 0, total: 0, remaining: 30, intervalId: null, timeoutId: null, currentQ: null, locked: false };
+  document.getElementById('games-picker-wrap').style.display = 'none';
+  document.getElementById('game-active-wrap').style.display = '';
+  document.getElementById('game-active-wrap').innerHTML =
+    '<div class="dash-section"><h3>⚡ Quick Facts Dash</h3>' +
+    '<p style="font-size:0.85rem;color:var(--text2)"><span id="qf-timer">30s</span> left · Correct: <span id="qf-correct">0</span></p>' +
+    '<div class="q-text" id="qf-text" style="margin:14px 0"></div>' +
+    '<div class="options-list" id="qf-options"></div></div>';
+  activeGame.intervalId = setInterval(function() {
+    if (!activeGame || activeGame.id !== 'quickFacts') return;
+    activeGame.remaining--;
+    var t = document.getElementById('qf-timer');
+    if (t) t.textContent = activeGame.remaining + 's';
+    if (activeGame.remaining <= 0) endQuickFacts();
+  }, 1000);
+  nextQuickFactsQuestion();
+}
+
+function nextQuickFactsQuestion() {
+  var g = activeGame;
+  if (!g || g.id !== 'quickFacts') return;
+  var category, q = null;
+  for (var attempt = 0; attempt < 30; attempt++) {
+    category = pick(QUICK_FACTS_CATEGORIES);
+    var candidate = generateQuestionLocal(getEffectiveLevel(category), category);
+    if (candidate.type === 'mcq' && candidate.options && candidate.options.length >= 2) { q = candidate; break; }
+  }
+  /* Every category has plenty of MCQ generators, so 30 draws essentially never fails --
+     but if it somehow did, end the round gracefully instead of crashing on a
+     non-MCQ question's missing .options. */
+  if (!q) { endQuickFacts(); return; }
+  g.currentQ = q;
+  g.locked = false;
+  document.getElementById('qf-text').textContent = q.text;
+  document.getElementById('qf-options').innerHTML = q.options.map(function(o, i) {
+    return '<button class="opt-btn" onclick="quickFactsAnswer(' + i + ')">' + o + '</button>';
+  }).join('');
+}
+
+function quickFactsAnswer(idx) {
+  var g = activeGame;
+  if (!g || g.id !== 'quickFacts' || g.locked || g.remaining <= 0) return;
+  g.locked = true;
+  g.total++;
+  var correct = idx === g.currentQ.answer;
+  if (correct) { g.correct++; playCorrectSound(); } else { playWrongSound(); }
+  var correctEl = document.getElementById('qf-correct');
+  if (correctEl) correctEl.textContent = g.correct;
+  g.timeoutId = setTimeout(function() {
+    if (activeGame && activeGame.id === 'quickFacts' && activeGame.remaining > 0) nextQuickFactsQuestion();
+  }, 350);
+}
+
+function endQuickFacts() {
+  var g = activeGame;
+  if (!g || g.id !== 'quickFacts') return;
+  if (g.intervalId) clearInterval(g.intervalId);
+  if (g.timeoutId) clearTimeout(g.timeoutId);
+  activeGame = null;
+  var ms = store.miniGameStats.quickFacts || {};
+  ms.bestCorrect = Math.max(ms.bestCorrect || 0, g.correct);
+  store.miniGameStats.quickFacts = ms;
+  var award = 15 + g.correct * 2;
+  awardMiniGameHappiness('quickFacts', award, g.correct + ' correct in 30 seconds!');
 }
 
 /* ============================================================
@@ -6812,6 +7274,51 @@ async function callAnthropicAPI(prompt) {
    JS: SESSION STATE
    ============================================================ */
 var session = null;
+var quizTimerInterval = null;
+var quizTimerRemaining = 0;
+
+/* Starts (or restarts) the optional per-question countdown -- a plain 1-second
+   setInterval "clock tick", not a continuous render loop, consistent with how the
+   rest of this file avoids requestAnimationFrame/canvas entirely. */
+function startQuizTimer(seconds) {
+  clearQuizTimer();
+  quizTimerRemaining = seconds;
+  var el = document.getElementById('q-timer');
+  if (el) el.style.display = '';
+  updateQuizTimerDisplay();
+  quizTimerInterval = setInterval(function() {
+    quizTimerRemaining--;
+    updateQuizTimerDisplay();
+    if (quizTimerRemaining <= 0) handleQuizTimeout();
+  }, 1000);
+}
+
+function clearQuizTimer() {
+  if (quizTimerInterval) { clearInterval(quizTimerInterval); quizTimerInterval = null; }
+  var el = document.getElementById('q-timer');
+  if (el) el.style.display = 'none';
+}
+
+function updateQuizTimerDisplay() {
+  var el = document.getElementById('q-timer');
+  if (!el) return;
+  el.textContent = '⏱ ' + Math.max(0, quizTimerRemaining) + 's';
+  el.classList.toggle('low', quizTimerRemaining <= 10);
+}
+
+/* Time ran out on the current question -- finalize it as incorrect through the
+   exact same resolveQuestion() path a manual wrong answer takes (score/XP/skill
+   tracking all stay correct), regardless of whether anything was selected/typed.
+   isRetry mirrors session.hintUsed so a timeout during the hint-retry phase is
+   still recorded accurately as a retry, not a fresh first attempt. */
+function handleQuizTimeout() {
+  clearQuizTimer();
+  if (!session || session.answered) return;
+  var q = session.questions[session.current];
+  if (!q || q.pending) return;
+  q.timedOut = true;
+  resolveQuestion(q, false, session.hintUsed);
+}
 
 /* Persists the in-progress quiz session so leaving the app mid-quiz (backgrounding
    on mobile, closing the tab, a page reload) and coming back resumes at the exact
@@ -7078,6 +7585,8 @@ async function renderQuestion() {
   if (hintBoxEl) hintBoxEl.style.display = 'none';
   renderQuizPetWidget('neutral');
   saveActiveSession();
+  if (store.quizTimerEnabled) startQuizTimer(store.quizTimerSeconds || 30);
+  else clearQuizTimer();
 }
 
 function selectOption(idx) {
@@ -7131,6 +7640,7 @@ function submitAnswer() {
    if any) correctness. Everything that must not be double-counted (score, XP, difficulty,
    skill mastery) lives here, not in showHintAndAllowRetry. */
 function resolveQuestion(q, correct, isRetry) {
+  clearQuizTimer();
   session.answered = true;
   q.wasCorrect = correct;
   if (isRetry) q.wasHintRetry = true;
@@ -7174,7 +7684,9 @@ function resolveQuestion(q, correct, isRetry) {
     ? (isRetry
         ? pick(['Nice recovery!', 'You got it!', 'Solved it together!', 'Great teamwork!'])
         : pick(['Fantastic!', 'Well done!', 'Correct!', 'Great job!', 'Awesome!', '太棒了！']))
-    : pick(["Good try! Let's look at the steps.", "Not quite — here's how it works.", "Almost! Let's learn together.", "加油！Let's review."]);
+    : (q.timedOut
+        ? "⏰ Time's up! Let's look at the steps."
+        : pick(["Good try! Let's look at the steps.", "Not quite — here's how it works.", "Almost! Let's learn together.", "加油！Let's review."]));
   document.getElementById('sol-steps').textContent =
     (q.type === 'input' && !correct ? 'Correct answer: ' + q.displayAnswer + '\n\n' : '') + q.explanation;
 
@@ -7416,7 +7928,11 @@ var BADGE_DEFS = [
   { id: 'mystery_unlocked', icon: '✨', name: 'Mystery Unlocked', desc: 'Your pet evolves at Level ' + MYSTERY_EVOLUTION_LEVEL, check: function() { return petIsEvolved(); } },
   { id: 'max_level_legend', icon: '🏆', name: 'Max Level Legend', desc: 'Your pet reaches Level 100', check: function() { return getPetLevel() >= PET_MAX_LEVEL; } },
   { id: 'generous_owner', icon: '🛍️', name: 'Generous Owner', desc: 'Buy 10 items from the Pet Shop', check: function() { return (store.totalShopPurchases || 0) >= 10; } },
-  { id: 'pet_collector', icon: '🎴', name: 'Pet Collector', desc: 'Discover 3 different Mystery Pets', check: function() { return Object.keys(store.petCollection || {}).length >= 3; } }
+  { id: 'pet_collector', icon: '🎴', name: 'Pet Collector', desc: 'Discover 3 different Mystery Pets', check: function() { return Object.keys(store.petCollection || {}).length >= 3; } },
+  { id: 'game_on', icon: '🕹️', name: 'Game On!', desc: 'Play a mini-game for the first time', check: function() { return (store.totalMiniGamesPlayed || 0) >= 1; } },
+  { id: 'arcade_regular', icon: '👾', name: 'Arcade Regular', desc: 'Play mini-games 20 times in total', check: function() { return (store.totalMiniGamesPlayed || 0) >= 20; } },
+  { id: 'memory_master', icon: '🃏', name: 'Memory Master', desc: 'Clear Memory Match with zero wasted attempts', check: function() { return !!(store.miniGameStats.memoryMatch && store.miniGameStats.memoryMatch.everPerfectClear); } },
+  { id: 'quick_thinker', icon: '⚡', name: 'Quick Thinker', desc: 'Get 10 or more correct in one Quick Facts Dash run', check: function() { return !!(store.miniGameStats.quickFacts && store.miniGameStats.quickFacts.bestCorrect >= 10); } }
 ];
 
 function checkBadges() {
@@ -7692,6 +8208,63 @@ function quizPetReact(mood, msg) {
     if (mood === 'happy') spawnPetHearts(wrap);
   }
   showPetSpeechBubble(msg, 'quiz-pet-speech-bubble');
+}
+
+/* ============================================================
+   JS: SAVE & BACKUP
+   Everything already persists automatically to this device's localStorage on every
+   change -- these two functions exist purely so progress can survive leaving the
+   device entirely (cleared browser data, a new phone/tablet, a reinstall), since
+   localStorage never does that on its own.
+   ============================================================ */
+function downloadBackup() {
+  try {
+    var data = JSON.stringify(store, null, 2);
+    var blob = new Blob([data], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'sg-learning-hub-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert('Could not create the backup file: ' + e.message);
+  }
+}
+
+function restoreBackup(event) {
+  var file = event.target.files && event.target.files[0];
+  event.target.value = ''; /* allow re-selecting the same file again later */
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function() {
+    var parsed;
+    try {
+      parsed = JSON.parse(reader.result);
+    } catch (e) {
+      alert('This file could not be read as a backup (not valid JSON).');
+      return;
+    }
+    /* Not a full schema validator -- just enough of a shape check to catch "wrong
+       file entirely" before it overwrites real progress on this device. */
+    if (!parsed || typeof parsed !== 'object' || !parsed.pet || typeof parsed.pet !== 'object') {
+      alert('This file does not look like a Learning Hub backup.');
+      return;
+    }
+    if (!confirm('Restoring this backup will REPLACE all current progress on this device. This cannot be undone. Continue?')) return;
+    store = migrateStoreFields(parsed); /* same backfill loadStore() uses, so an older backup still ends up in the current shape */
+    saveStore(store);
+    session = null;
+    clearActiveSession();
+    alert('Backup restored! Reloading...');
+    location.reload();
+  };
+  reader.onerror = function() {
+    alert('Could not read that file.');
+  };
+  reader.readAsText(file);
 }
 
 /* ============================================================
